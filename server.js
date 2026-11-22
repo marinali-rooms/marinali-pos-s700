@@ -29,7 +29,7 @@ function checkExpirations() {
   });
 }
 
-// API: Ritorna lo stato delle suite (inviamo solo se hanno un conto attivo, non l'importo pubblico)
+// API: Ritorna lo stato delle suite (indica solo se c'è un conto, senza importo pubblico)
 app.get('/api/suites', (req, res) => {
   checkExpirations();
   const publicSuites = {};
@@ -51,7 +51,7 @@ app.post('/api/admin/set-amount', (req, res) => {
   }
 
   const parsedAmount = parseFloat(amount) || 0;
-  const days = Math.min(Math.max(parseInt(daysValid, 10) || 1, 1), 9); // Limita tra 1 e 9 giorni
+  const days = Math.min(Math.max(parseInt(daysValid, 10) || 1, 1), 9);
 
   suites[suiteId].amount = parsedAmount;
 
@@ -65,6 +65,21 @@ app.post('/api/admin/set-amount', (req, res) => {
 
   console.log(`[ADMIN] ${suites[suiteId].name}: €${parsedAmount} (Validità: ${days} giorni)`);
   res.json({ success: true, suiteName: suites[suiteId].name, amount: parsedAmount, daysValid: days });
+});
+
+// API ADMIN: Annulla/Azzera addebito manualmente (es. pagamento in contanti)
+app.post('/api/admin/clear-amount', (req, res) => {
+  const { suiteId } = req.body;
+
+  if (!suites[suiteId]) {
+    return res.status(400).json({ error: "Suite non valida" });
+  }
+
+  suites[suiteId].amount = 0;
+  suites[suiteId].expiresAt = null;
+
+  console.log(`[ADMIN CLEAR] Addebito cancellato manualmente per ${suites[suiteId].name}`);
+  res.json({ success: true, suiteName: suites[suiteId].name });
 });
 
 // API POS: Avvia il pagamento su Stripe S700
