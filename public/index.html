@@ -15,14 +15,11 @@
 
     .container { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
-    /* Griglia POS con grandi pulsanti touch per il cliente */
+    /* Griglia POS con grandi pulsanti touch riservati (senza cifre visibili) */
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 480px; margin: 0 auto; }
-    .suite-card { background: white; border: 3px solid #d1d5db; border-radius: 16px; padding: 25px 15px; text-align: center; cursor: pointer; user-select: none; transition: all 0.15s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .suite-card { background: white; border: 3px solid #d1d5db; border-radius: 16px; padding: 35px 15px; text-align: center; cursor: pointer; user-select: none; transition: all 0.15s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .suite-card:active { transform: scale(0.96); border-color: #059669; background-color: #ecfdf5; }
-    .suite-name { font-size: 1.4rem; font-weight: 800; color: #1f2937; margin-bottom: 6px; }
-    .suite-amount { font-size: 1.5rem; font-weight: 900; color: #059669; }
-    .suite-amount.empty { color: #9ca3af; font-size: 0.95rem; font-weight: 500; }
-    .suite-expire { font-size: 0.75rem; color: #6b7280; margin-top: 4px; }
+    .suite-name { font-size: 1.6rem; font-weight: 800; color: #1f2937; }
 
     /* Pannello Admin */
     .admin-panel { max-width: 420px; margin: 0 auto; width: 100%; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
@@ -32,7 +29,7 @@
     .btn-submit { width: 100%; padding: 15px; background: #059669; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
     .btn-submit:active { background: #047857; }
 
-    #status-msg { text-align: center; margin-top: 20px; font-weight: bold; font-size: 1.15rem; min-height: 30px; }
+    #status-msg { text-align: center; margin-top: 24px; font-weight: bold; font-size: 1.15rem; min-height: 30px; }
   </style>
 </head>
 <body>
@@ -46,7 +43,7 @@
 
   <!-- VISTA POS CLIENTE -->
   <div id="pos-view" class="container">
-    <h2 style="text-align: center; margin-bottom: 24px; font-size: 1.1rem; color: #4b5563;">Tocca la tua Suite per procedere al pagamento:</h2>
+    <h2 style="text-align: center; margin-bottom: 24px; font-size: 1.1rem; color: #4b5563;">Tocca la tua Suite per saldare:</h2>
     <div class="grid" id="suites-grid"></div>
     <div id="status-msg"></div>
   </div>
@@ -72,12 +69,17 @@
       </div>
 
       <div class="form-group">
-        <label for="admin-days">Validità Addebito (TTL):</label>
+        <label for="admin-days">Validità Addebito (Giorni):</label>
         <select id="admin-days">
           <option value="1" selected>1 Giorno (Default)</option>
           <option value="2">2 Giorni</option>
           <option value="3">3 Giorni</option>
+          <option value="4">4 Giorni</option>
+          <option value="5">5 Giorni</option>
+          <option value="6">6 Giorni</option>
           <option value="7">7 Giorni</option>
+          <option value="8">8 Giorni</option>
+          <option value="9">9 Giorni</option>
         </select>
       </div>
 
@@ -122,20 +124,7 @@
         card.className = 'suite-card';
         card.onclick = () => startPayment(id);
 
-        let expireText = '';
-        if (suite.expiresAt && suite.amount > 0) {
-          const expDate = new Date(suite.expiresAt);
-          expireText = `<div class="suite-expire">Scade il ${expDate.toLocaleDateString('it-IT')} ore ${expDate.getHours()}:${String(expDate.getMinutes()).padStart(2, '0')}</div>`;
-        }
-
-        const amountHTML = suite.amount > 0 
-          ? `<div class="suite-amount">€ ${suite.amount.toFixed(2)}</div>${expireText}` 
-          : `<div class="suite-amount empty">Nessun conto</div>`;
-
-        card.innerHTML = `
-          <div class="suite-name">${suite.name}</div>
-          ${amountHTML}
-        `;
+        card.innerHTML = `<div class="suite-name">${suite.name}</div>`;
         grid.appendChild(card);
       });
     }
@@ -144,14 +133,14 @@
       const suite = currentSuites[suiteId];
       const statusDiv = document.getElementById('status-msg');
 
-      if (!suite || suite.amount <= 0) {
+      if (!suite || !suite.hasAmount) {
         statusDiv.style.color = '#dc2626';
         statusDiv.innerText = `Nessun conto attivo per ${suite.name}`;
         return;
       }
 
       statusDiv.style.color = '#059669';
-      statusDiv.innerText = `Invio €${suite.amount.toFixed(2)} allo Stripe S700...`;
+      statusDiv.innerText = `Invio richiesta al lettore POS S700...`;
 
       try {
         const res = await fetch('/api/pos/pay', {
@@ -162,7 +151,7 @@
         const data = await res.json();
 
         if (data.success) {
-          statusDiv.innerText = `Avvicina la carta al POS per saldare €${suite.amount.toFixed(2)}`;
+          statusDiv.innerText = `Importo €${data.amount.toFixed(2)}: avvicina la carta al lettore POS.`;
         } else {
           statusDiv.style.color = '#dc2626';
           statusDiv.innerText = `Errore: ${data.error}`;
@@ -186,13 +175,12 @@
       const data = await res.json();
 
       if (data.success) {
-        alert(`Addebito salvato per ${data.suite.name}: €${data.suite.amount.toFixed(2)} (Valido ${daysValid} gg)`);
+        alert(`Addebito salvato per ${data.suiteName}: €${data.amount.toFixed(2)} (Valido per ${data.daysValid} giorni)`);
         document.getElementById('admin-amount').value = '';
         fetchSuites();
       }
     }
 
-    // Polling ogni 3 secondi per mantenere aggiornato lo schermo del POS
     setInterval(fetchSuites, 3000);
     fetchSuites();
   </script>
