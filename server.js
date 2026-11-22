@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Struttura dati in memoria con campo expiresAt
+// Struttura dati in memoria
 let suites = {
   "1": { name: "Suite 1", amount: 0, expiresAt: null },
   "2": { name: "Suite 2", amount: 0, expiresAt: null },
@@ -17,25 +17,32 @@ let suites = {
   "4": { name: "Suite 4", amount: 0, expiresAt: null }
 };
 
-// Funzione ausiliaria per verificare ed azzerare gli addebiti scaduti
+// Controllo scadenze TTL
 function checkExpirations() {
   const now = new Date();
   Object.keys(suites).forEach(id => {
     if (suites[id].expiresAt && new Date(suites[id].expiresAt) < now) {
-      console.log(`[TTL EXPIRED] Addebito per ${suites[id].name} scaduto. Azzero importo.`);
+      console.log(`[TTL EXPIRED] Addebito per ${suites[id].name} scaduto.`);
       suites[id].amount = 0;
       suites[id].expiresAt = null;
     }
   });
 }
 
-// API: Legge lo stato delle suite (controllando prima le scadenze)
+// API: Ritorna lo stato delle suite (inviamo solo se hanno un conto attivo, non l'importo pubblico)
 app.get('/api/suites', (req, res) => {
   checkExpirations();
-  res.json(suites);
+  const publicSuites = {};
+  Object.keys(suites).forEach(id => {
+    publicSuites[id] = {
+      name: suites[id].name,
+      hasAmount: suites[id].amount > 0
+    };
+  });
+  res.json(publicSuites);
 });
 
-// API ADMIN: Imposta importo + giorni di validità (default 1 giorno)
+// API ADMIN: Imposta importo + giorni di validità (da 1 a 9 giorni)
 app.post('/api/admin/set-amount', (req, res) => {
   const { suiteId, amount, daysValid = 1 } = req.body;
 
@@ -44,18 +51,20 @@ app.post('/api/admin/set-amount', (req, res) => {
   }
 
   const parsedAmount = parseFloat(amount) || 0;
+  const days = Math.min(Math.max(parseInt(daysValid, 10) || 1, 1), 9); // Limita tra 1 e 9 giorni
+
   suites[suiteId].amount = parsedAmount;
 
   if (parsedAmount > 0) {
     const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + parseInt(daysValid, 10));
+    expirationDate.setDate(expirationDate.getDate() + days);
     suites[suiteId].expiresAt = expirationDate.toISOString();
   } else {
     suites[suiteId].expiresAt = null;
   }
 
-  console.log(`[ADMIN] ${suites[suiteId].name}: €${parsedAmount} (Scadenza: ${suites[suiteId].expiresAt})`);
-  res.json({ success: true, suite: suites[suiteId] });
+  console.log(`[ADMIN] ${suites[suiteId].name}: €${parsedAmount} (Validità: ${days} giorni)`);
+  res.json({ success: true, suiteName: suites[suiteId].name, amount: parsedAmount, daysValid: days });
 });
 
 // API POS: Avvia il pagamento su Stripe S700
@@ -65,7 +74,7 @@ app.post('/api/pos/pay', async (req, res) => {
   const suite = suites[suiteId];
 
   if (!suite || suite.amount <= 0) {
-    return res.status(400).json({ error: "Nessun conto attivo o addebito scaduto per questa suite." });
+    return res.status(400).json({ error: "Nessun conto attivo per questa suite." });
   }
 
   try {
@@ -83,7 +92,7 @@ app.post('/api/pos/pay', async (req, res) => {
       payment_intent: paymentIntent.id,
     });
 
-    res.json({ success: true, paymentIntentId: paymentIntent.id });
+    res.json({ success: true, amount: suite.amount, paymentIntentId: paymentIntent.id });
   } catch (error) {
     console.error("Errore Stripe Terminal:", error);
     res.status(500).json({ error: error.message });
