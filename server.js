@@ -29,17 +29,10 @@ function checkExpirations() {
   });
 }
 
-// API: Ritorna lo stato delle suite (indica solo se c'è un conto, senza importo pubblico)
+// API: Ritorna lo stato delle suite (incluso l'importo per la gestione Admin)
 app.get('/api/suites', (req, res) => {
   checkExpirations();
-  const publicSuites = {};
-  Object.keys(suites).forEach(id => {
-    publicSuites[id] = {
-      name: suites[id].name,
-      hasAmount: suites[id].amount > 0
-    };
-  });
-  res.json(publicSuites);
+  res.json(suites);
 });
 
 // API ADMIN: Imposta importo + giorni di validità (da 1 a 9 giorni)
@@ -67,7 +60,7 @@ app.post('/api/admin/set-amount', (req, res) => {
   res.json({ success: true, suiteName: suites[suiteId].name, amount: parsedAmount, daysValid: days });
 });
 
-// API ADMIN: Annulla/Azzera addebito manualmente (es. pagamento in contanti)
+// API ADMIN: Annulla addebito manualmente (es. contanti)
 app.post('/api/admin/clear-amount', (req, res) => {
   const { suiteId } = req.body;
 
@@ -78,7 +71,7 @@ app.post('/api/admin/clear-amount', (req, res) => {
   suites[suiteId].amount = 0;
   suites[suiteId].expiresAt = null;
 
-  console.log(`[ADMIN CLEAR] Addebito cancellato manualmente per ${suites[suiteId].name}`);
+  console.log(`[ADMIN CLEAR] Addebito cancellato per ${suites[suiteId].name}`);
   res.json({ success: true, suiteName: suites[suiteId].name });
 });
 
