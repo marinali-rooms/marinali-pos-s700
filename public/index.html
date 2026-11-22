@@ -15,7 +15,7 @@
 
     .container { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
-    /* Griglia POS con grandi pulsanti touch riservati (senza cifre visibili) */
+    /* Griglia POS con grandi pulsanti touch (senza cifre visibili al pubblico) */
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 480px; margin: 0 auto; }
     .suite-card { background: white; border: 3px solid #d1d5db; border-radius: 16px; padding: 35px 15px; text-align: center; cursor: pointer; user-select: none; transition: all 0.15s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .suite-card:active { transform: scale(0.96); border-color: #059669; background-color: #ecfdf5; }
@@ -26,8 +26,10 @@
     .form-group { margin-bottom: 18px; }
     label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.95rem; }
     select, input { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 1rem; }
-    .btn-submit { width: 100%; padding: 15px; background: #059669; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+    .btn-submit { width: 100%; padding: 15px; background: #059669; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
     .btn-submit:active { background: #047857; }
+    .btn-clear { width: 100%; padding: 13px; background: #dc2626; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    .btn-clear:active { background: #b91c1c; }
 
     #status-msg { text-align: center; margin-top: 24px; font-weight: bold; font-size: 1.15rem; min-height: 30px; }
   </style>
@@ -84,6 +86,7 @@
       </div>
 
       <button class="btn-submit" onclick="setSuiteAmount()">Salva Addebito</button>
+      <button class="btn-clear" onclick="clearSuiteAmount()">Annulla Addebito (Contanti / Reset)</button>
     </div>
   </div>
 
@@ -176,6 +179,23 @@
 
       if (data.success) {
         alert(`Addebito salvato per ${data.suiteName}: €${data.amount.toFixed(2)} (Valido per ${data.daysValid} giorni)`);
+        document.getElementById('admin-amount').value = '';
+        fetchSuites();
+      }
+    }
+
+    async function clearSuiteAmount() {
+      const suiteId = document.getElementById('admin-suite').value;
+
+      const res = await fetch('/api/admin/clear-amount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suiteId })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`Addebito per ${data.suiteName} annullato con successo.`);
         document.getElementById('admin-amount').value = '';
         fetchSuites();
       }
