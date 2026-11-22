@@ -1,50 +1,12 @@
-#!/bin/bash
-
-# === FORZA CONNESSIONE MOUSE BLUETOOTH SUBITO ===
-echo "=== Connessione mouse Bluetooth in corso... ==="
-
-# Accendi Bluetooth se spento
-if [ "$(blueutil -p)" -eq 0 ]; then
-  blueutil -p 1
-  sleep 1
-fi
-
-# Connetti il mouse (usando il formato MAC standard con i due punti)
-MOUSE_MAC="94:21:57:d8:9d:5f"
-
-if blueutil --is-connected "$MOUSE_MAC" | grep -q "1"; then
-  echo "Mouse già connesso."
-else
-  echo "Tentativo di connessione mouse..."
-  blueutil --connect "$MOUSE_MAC" 2>/dev/null
-  sleep 2
-fi
-
-echo "Procedura Bluetooth completata."
-
-# === SMONTAGGIO SICURO DEI VOLUMI ALL'AVVIO ===
-# Attesa caricamento completo di Finder e servizi di sistema
-sleep 17
-
-# Elenco dei volumi da smontare
-VOLUMES=("TimeMachineBackup" "ExternalData")
-
-for VOL in "${VOLUMES[@]}"; do
-  VOL_PATH="/Volumes/$VOL"
-
-  # Verifica se il volume è effettivamente montato
-  if diskutil info "$VOL_PATH" >/dev/null 2>&1; then
-    echo "Trovato $VOL, tentativo di smontaggio sicuro..."
-    
-    # Prova lo smontaggio normale; se fallisce perché occupato da Time Machine/Spotlight, usa il force
-    if ! diskutil unmount "$VOL_PATH"; then
-      echo "Volume $VOL occupato dai processi di sistema, forzo lo smontaggio..."
-      diskutil unmount force "$VOL_PATH"
-    fi
-  else
-    echo "Volume $VOL non presente o già smontato."
-  fi
-done
-
-echo "Script completato con successo."
-exit 0
+{
+  "name": "marinali-pos-s700",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "stripe": "^15.10.0"
+  }
+}
