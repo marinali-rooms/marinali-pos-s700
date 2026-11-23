@@ -14,10 +14,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Converte l'importo in centesimi per Stripe (es. 140.00 € -> 14000)
     const amountInCents = Math.round(amount * 100);
 
-    // 2. Crea l'intenzione di pagamento (PaymentIntent)
+    // 1. Crea l'intenzione di pagamento su Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'eur',
@@ -26,14 +25,13 @@ export default async function handler(req, res) {
       description: `Marinali Rooms - ${suite}`
     });
 
-    // 3. Recupera l'ID del lettore S700 dalle variabili d'ambiente
     const readerId = process.env.STRIPE_READER_ID;
 
     if (!readerId) {
       throw new Error('STRIPE_READER_ID non configurato nelle variabili Vercel.');
     }
 
-    // 4. Invia la richiesta di pagamento direttamente al lettore S700
+    // 2. Invia l'istruzione di addebito al lettore S700
     await stripe.terminal.readers.processPaymentIntent(readerId, {
       payment_intent: paymentIntent.id
     });
