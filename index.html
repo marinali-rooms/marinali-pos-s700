@@ -8,7 +8,6 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <style>
-    /* Rimuove le freccette del selettore numerico nei browser webkit e firefox */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
       -webkit-appearance: none; 
@@ -26,10 +25,10 @@
     const { useState, useEffect, createElement: h } = React;
 
     const INITIAL_PRICES = {
-      'Suite 1': { price: '', expiresAt: null },
-      'Suite 2': { price: '', expiresAt: null },
-      'Suite 3': { price: '', expiresAt: null },
-      'Suite 4': { price: '', expiresAt: null }
+      'Suite 1': { price: '', expiresAt: null, days: 1 },
+      'Suite 2': { price: '', expiresAt: null, days: 1 },
+      'Suite 3': { price: '', expiresAt: null, days: 1 },
+      'Suite 4': { price: '', expiresAt: null, days: 1 }
     };
 
     function App() {
@@ -41,9 +40,8 @@
       const [pinInput, setPinInput] = useState('');
       const [showPinModal, setShowPinModal] = useState(false);
 
-      // Carica stato e pulisci scadenze superate
       const loadAndFilterPrices = () => {
-        const saved = localStorage.getItem('marinali_prices_v2');
+        const saved = localStorage.getItem('marinali_prices_v3');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -52,13 +50,13 @@
             
             Object.keys(parsed).forEach(suite => {
               if (parsed[suite].expiresAt && now > parsed[suite].expiresAt) {
-                parsed[suite] = { price: '', expiresAt: null };
+                parsed[suite] = { price: '', expiresAt: null, days: 1 };
                 hasChanges = true;
               }
             });
 
             if (hasChanges) {
-              localStorage.setItem('marinali_prices_v2', JSON.stringify(parsed));
+              localStorage.setItem('marinali_prices_v3', JSON.stringify(parsed));
             }
             setPrices(parsed);
           } catch (e) {
@@ -72,8 +70,6 @@
         if (urlParams.get('mode') === 'admin') setMode('admin');
 
         loadAndFilterPrices();
-
-        // Controllo scadenze ogni 30 secondi
         const interval = setInterval(loadAndFilterPrices, 30000);
 
         const channel = new BroadcastChannel('marinali_pos_channel');
@@ -88,24 +84,26 @@
         };
       }, []);
 
-      const updateSuite = (suite, price, expireHours = null) => {
+      const updateSuite = (suite, priceVal, daysVal = null) => {
         const now = Date.now();
+        const selectedDays = daysVal !== null ? daysVal : (prices[suite]?.days || 1);
+        
         let expiresAt = null;
-
-        if (expireHours && expireHours > 0) {
-          expiresAt = now + (expireHours * 60 * 60 * 1000);
+        if (priceVal !== '' && priceVal !== null) {
+          expiresAt = now + (selectedDays * 24 * 60 * 60 * 1000);
         }
 
         const updated = {
           ...prices,
           [suite]: {
-            price: price === '' ? '' : parseFloat(price) || '',
-            expiresAt: price === '' ? null : (expiresAt || prices[suite]?.expiresAt || null)
+            price: priceVal === '' ? '' : parseFloat(priceVal) || '',
+            expiresAt: priceVal === '' ? null : expiresAt,
+            days: selectedDays
           }
         };
 
         setPrices(updated);
-        localStorage.setItem('marinali_prices_v2', JSON.stringify(updated));
+        localStorage.setItem('marinali_prices_v3', JSON.stringify(updated));
         
         const channel = new BroadcastChannel('marinali_pos_channel');
         channel.postMessage({ type: 'PRICES_UPDATED', prices: updated });
@@ -172,11 +170,15 @@
 
       const formatExpiry = (timestamp) => {
         if (!timestamp) return null;
-        const diffMinutes = Math.round((timestamp - Date.now()) / (1000 * 60));
-        if (diffMinutes <= 0) return 'Expired';
-        if (diffMinutes < 60) return `Expires in ${diffMinutes}m`;
-        const hours = Math.floor(diffMinutes / 60);
-        return `Expires in ${hours}h ${diffMinutes % 60}m`;
+        const diffMs = timestamp - Date.now();
+        if (diffMs <= 0) return 'Expired';
+        
+        const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const days = Math.floor(totalHours / 24);
+        const hours = totalHours % 24;
+
+        if (days > 0) return `Scade tra ${days}g e ${hours}h`;
+        return `Scade tra ${hours}h`;
       };
 
       return h('div', { className: 'min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative' },
@@ -205,9 +207,8 @@
               h('p', { className: 'text-sm text-slate-400 mt-1' }, 'Please select your suite to complete payment')
             ),
             h('div', { className: 'grid grid-cols-1 gap-3' },
-              Object.keys(prices).map(suite => {
-                const priceVal = getSuitePrice(suite);
-                return h('button', {
+              Object.keys(prices).map(suite =>
+                h('button', {
                   key: suite,
                   onClick: () => { setSelectedSuite(suite); setPaymentStatus('confirm'); },
                   className: 'w-full py-5 px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 active:scale-[0.98] transition-all flex justify-between items-center shadow-lg'
@@ -217,8 +218,8 @@
                     prices[suite]?.expiresAt && h('span', { className: 'text-[10px] text-amber-400/70 block mt-0.5' }, formatExpiry(prices[suite].expiresAt))
                   ),
                   h('span', { className: 'text-slate-400 text-sm' }, 'Select →')
-                );
-              })
+                )
+              )
             )
           ),
 
@@ -285,11 +286,14 @@
         mode === 'admin' && h('main', { className: 'flex-1 py-6 space-y-6' },
           h('div', { className: 'border-b border-slate-800 pb-3' },
             h('h2', { className: 'text-lg font-bold text-amber-400' }, 'Pannello Gestore'),
-            h('p', { className: 'text-xs text-slate-400' }, 'Imposta importo e scadenza per gli ospiti in arrivo')
+            h('p', { className: 'text-xs text-slate-400' }, 'Imposta importo e giorni di validità (1-9 giorni)')
           ),
           h('div', { className: 'space-y-5' },
-            Object.keys(prices).map(suite =>
-              h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 space-y-3' },
+            Object.keys(prices).map(suite => {
+              const currentDays = prices[suite]?.days || 1;
+              const hasPrice = prices[suite]?.price !== '' && prices[suite]?.price !== null;
+
+              return h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 space-y-3' },
                 h('div', { className: 'flex items-center justify-between' },
                   h('span', { className: 'font-semibold text-slate-100 text-base' }, suite),
                   h('div', { className: 'flex items-center gap-2' },
@@ -309,28 +313,28 @@
                   )
                 ),
 
-                // Sezione Scadenza (Expire Date)
-                prices[suite]?.price !== '' && h('div', { className: 'flex items-center justify-between border-t border-slate-700/40 pt-2.5 text-xs' },
-                  h('span', { className: 'text-slate-400' }, 
-                    prices[suite]?.expiresAt ? formatExpiry(prices[suite].expiresAt) : 'No expiration set'
+                // Selettore Giorni 1-9 (visibile quando c'è un importo)
+                hasPrice && h('div', { className: 'space-y-2 border-t border-slate-700/40 pt-2.5' },
+                  h('div', { className: 'flex justify-between items-center text-xs' },
+                    h('span', { className: 'text-slate-400' }, 'Validità prezzo:'),
+                    h('span', { className: 'text-amber-400 font-medium' }, formatExpiry(prices[suite].expiresAt))
                   ),
-                  h('div', { className: 'flex gap-1.5' },
-                    [
-                      { label: '2h', h: 2 },
-                      { label: '6h', h: 6 },
-                      { label: '12h', h: 12 },
-                      { label: '24h', h: 24 }
-                    ].map(opt =>
+                  h('div', { className: 'grid grid-cols-9 gap-1 pt-1' },
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d =>
                       h('button', {
-                        key: opt.label,
-                        onClick: () => updateSuite(suite, prices[suite].price, opt.h),
-                        className: 'px-2 py-1 bg-slate-700/60 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400 rounded-lg text-[11px] font-medium transition-colors border border-slate-600/40'
-                      }, `+${opt.label}`)
+                        key: d,
+                        onClick: () => updateSuite(suite, prices[suite].price, d),
+                        className: `py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                          currentDays === d
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md scale-105'
+                            : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-700'
+                        }`
+                      }, `${d}g`)
                     )
                   )
                 )
-              )
-            )
+              );
+            })
           )
         ),
 
