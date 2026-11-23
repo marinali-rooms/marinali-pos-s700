@@ -7,7 +7,22 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { suite, amount } = req.body;
+  const { suite, amount, action } = req.body;
+  const readerId = process.env.STRIPE_READER_ID;
+
+  if (!readerId) {
+    return res.status(500).json({ success: false, message: 'STRIPE_READER_ID non configurato nelle variabili Vercel.' });
+  }
+
+  // Azione facoltativa per cancellare manualmente l'operazione sul POS dal tablet
+  if (action === 'cancel') {
+    try {
+      await stripe.terminal.readers.cancelAction(readerId);
+      return res.status(200).json({ success: true, message: 'POS Action Canceled' });
+    } catch (e) {
+      return res.status(200).json({ success: true });
+    }
+  }
 
   if (!amount || amount <= 0) {
     return res.status(400).json({ message: 'Invalid amount' });
@@ -15,13 +30,15 @@ export default async function handler(req, res) {
 
   try {
     const amountInCents = Math.round(amount * 100);
-    const readerId = process.env.STRIPE_READER_ID;
 
-    if (!readerId) {
-      throw new Error('STRIPE_READER_ID non configurato nelle variabili Vercel.');
+    // 1. Prima di inviare una nuova transazione, annulla eventuali operazioni pendenti sul POS
+    try {
+      await stripe.terminal.readers.cancelAction(readerId);
+    } catch (e) {
+      // Ignora se non c'erano azioni pendenti
     }
 
-    // 1. Crea il Payment Intent
+    // 2. Crea l'intenzione di pagamento su Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'eur',
@@ -30,25 +47,23 @@ export default async function handler(req, res) {
       description: `Marinali Rooms - ${suite}`
     });
 
-    // 2. Invia l'importo al lettore S700
+    // 3. Invia l'importo al lettore S700
     await stripe.terminal.readers.processPaymentIntent(readerId, {
       payment_intent: paymentIntent.id
     });
 
-    // 3. POLLING/ATTESA: Interroga Stripe finché l'ospite non passa la carta sul lettore (max 45 secondi)
-    let completed = false;
+    // 4. Polling con Timeout a 60 secondi (12 tentativi da 5 secondi)
     let attempts = 0;
-    const maxAttempts = 15; // 15 tentativi ogni 3 secondi = 45 secondi di timeout
+    const maxAttempts = 12;
 
-    while (!completed && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+    while (attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       attempts++;
 
       const updatedIntent = await stripe.paymentIntents.retrieve(paymentIntent.id);
 
-      // Se la carta è stata strisciata/avvicinata con successo
-      if (updatedIntent.status === 'succeeded') {
-        completed = true;
+      // Riconosce sia 'succeeded' che 'requires_capture' o 'processing' come pagamenti ANDATI A BUON FINE
+      if (['succeeded', 'requires_capture', 'processing'].includes(updatedIntent.status)) {
         return res.status(200).json({
           success: true,
           message: 'Payment completed successfully!',
@@ -56,24 +71,29 @@ export default async function handler(req, res) {
         });
       }
 
-      // Se il pagamento sul lettore è stato annullato o fallito
-      if (updatedIntent.status === 'canceled' || updatedIntent.status === 'requires_payment_method') {
-        if (attempts > 2 && updatedIntent.status === 'requires_payment_method') {
-          // Il lettore ha rifiutato la carta
-          throw new Error('Payment was declined or canceled on the reader.');
-        }
+      // Se la carta viene rifiutata o l'operazione viene annullata dall'utente sul lettore
+      if (updatedIntent.status === 'canceled') {
+        throw new Error('Transaction was canceled on the card reader.');
       }
     }
 
-    // Se scadono i 45 secondi senza passaggio di carta, annulla la transazione sul POS
-    await stripe.terminal.readers.cancelAction(readerId);
+    // 5. TIMEOUT SCADUTO (60 SECONDI): Annulla l'importo sul POS e rilascia lo schermo dell'S700
+    try {
+      await stripe.terminal.readers.cancelAction(readerId);
+    } catch (e) {}
+
     return res.status(408).json({
       success: false,
-      message: 'Transaction timed out. Please try again.'
+      message: 'Transaction timed out after 60 seconds. Reader reset.'
     });
 
   } catch (error) {
     console.error('Stripe Terminal Error:', error);
+    // In caso di errore, resetta lo schermo del POS
+    try {
+      await stripe.terminal.readers.cancelAction(readerId);
+    } catch (e) {}
+
     return res.status(500).json({
       success: false,
       message: error.message || 'Error processing payment on Stripe Reader'
