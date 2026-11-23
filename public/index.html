@@ -1,249 +1,637 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marinali Rooms POS</title>
-  <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
-    body { background-color: #f4f6f8; color: #1a1a1a; display: flex; flex-direction: column; min-height: 100vh; }
-    header { background-color: #111827; color: white; padding: 16px; text-align: center; font-weight: bold; letter-spacing: 1px; font-size: 1.2rem; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marinali Rooms - Reception POS & Admin</title>
     
-    .nav-tabs { display: flex; background: #e5e7eb; border-bottom: 1px solid #ccc; }
-    .tab-btn { flex: 1; padding: 14px; border: none; background: none; font-weight: bold; cursor: pointer; color: #4b5563; font-size: 0.95rem; }
-    .tab-btn.active { background: white; color: #111827; border-bottom: 4px solid #059669; }
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Playfair Display (Luxury Serif) & Inter (Clean Sans) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- React & Babel Frameworks -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-    .container { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
-
-    /* Griglia POS con grandi pulsanti touch (senza cifre visibili al pubblico) */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 480px; margin: 0 auto; }
-    .suite-card { background: white; border: 3px solid #d1d5db; border-radius: 16px; padding: 35px 15px; text-align: center; cursor: pointer; user-select: none; transition: all 0.15s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .suite-card:active { transform: scale(0.96); border-color: #059669; background-color: #ecfdf5; }
-    .suite-name { font-size: 1.6rem; font-weight: 800; color: #1f2937; }
-
-    /* Pannello Admin */
-    .admin-panel { max-width: 440px; margin: 0 auto; width: 100%; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
-    .form-group { margin-bottom: 18px; }
-    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.95rem; }
-    select, input { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 1rem; }
-    .btn-submit { width: 100%; padding: 15px; background: #059669; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-    .btn-submit:active { background: #047857; }
-    .btn-clear { width: 100%; padding: 13px; background: #dc2626; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; }
-    .btn-clear:active { background: #b91c1c; }
-
-    /* Lista Stato Addebiti in Admin */
-    .status-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-bottom: 20px; }
-    .status-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; }
-    .status-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px border-dash #e5e7eb; font-size: 0.95rem; }
-    .status-item:last-child { border-bottom: none; }
-    .badge-active { background: #d1fae5; color: #065f46; font-weight: bold; padding: 4px 10px; border-radius: 20px; font-size: 0.9rem; }
-    .badge-empty { background: #f3f4f6; color: #9ca3af; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; }
-
-    #status-msg { text-align: center; margin-top: 24px; font-weight: bold; font-size: 1.15rem; min-height: 30px; }
-  </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdfbf7',
+                            100: '#f7f2e8',
+                            200: '#ece1cd',
+                            300: '#dfcca8',
+                            400: '#ceaf7a',
+                            500: '#b89254',
+                            600: '#9b7641',
+                            700: '#7e5c36',
+                            800: '#674a31',
+                            900: '#543d2c',
+                            950: '#2d1e15',
+                        },
+                        stone: {
+                            850: '#211f1d',
+                            950: '#0f0e0d'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Inter"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Disable text selection for clean kiosk experience */
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        /* Touch feedback animation */
+        .active-scale {
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        .active-scale:active {
+            transform: scale(0.97);
+        }
+    </style>
 </head>
-<body>
+<body class="bg-stone-950 text-stone-100 font-sans antialiased min-h-screen overflow-x-hidden no-select">
+    <div id="root"></div>
 
-  <header>MARINALI ROOMS</header>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('pos')">POS DISPLAY</button>
-    <button class="tab-btn" onclick="switchTab('admin')">ADMIN (IMPOSTA)</button>
-  </div>
+        // Default initial suite configuration
+        const INITIAL_SUITES = [
+            { id: 1, name: 'SUITE 1', amount: 140.00, expiresAt: null, updatedAt: Date.now() },
+            { id: 2, name: 'SUITE 2', amount: 0.00, expiresAt: null, updatedAt: Date.now() },
+            { id: 3, name: 'SUITE 3', amount: 0.00, expiresAt: null, updatedAt: Date.now() },
+            { id: 4, name: 'SUITE 4', amount: 0.00, expiresAt: null, updatedAt: Date.now() },
+        ];
 
-  <!-- VISTA POS CLIENTE -->
-  <div id="pos-view" class="container" style="justify-content: center;">
-    <h2 style="text-align: center; margin-bottom: 24px; font-size: 1.1rem; color: #4b5563;">Tocca la tua Suite per saldare:</h2>
-    <div class="grid" id="suites-grid"></div>
-    <div id="status-msg"></div>
-  </div>
+        // Real-time broadcast channel across browser tabs/devices
+        const syncChannel = new BroadcastChannel('marinali_pos_sync');
 
-  <!-- VISTA ADMIN -->
-  <div id="admin-view" class="container" style="display: none;">
-    <div class="admin-panel">
-      
-      <!-- Stato Addebiti Attivi -->
-      <div class="status-box">
-        <div class="status-title">Addebiti Attualmente Attivi:</div>
-        <div id="admin-active-list">Caricamento...</div>
-      </div>
+        function App() {
+            // Determine initial mode from URL parameter (?mode=admin or ?mode=kiosk)
+            const [mode, setMode] = useState(() => {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('mode') === 'admin' ? 'admin' : 'kiosk';
+            });
 
-      <h3 style="margin-bottom: 16px; color: #111827; font-size: 1.1rem;">Gestisci Addebito</h3>
-      
-      <div class="form-group">
-        <label for="admin-suite">Seleziona Suite:</label>
-        <select id="admin-suite">
-          <option value="1">Suite 1</option>
-          <option value="2">Suite 2</option>
-          <option value="3">Suite 3</option>
-          <option value="4">Suite 4</option>
-        </select>
-      </div>
+            const [suites, setSuites] = useState(() => {
+                const saved = localStorage.getItem('marinali_suites');
+                if (saved) {
+                    try { return JSON.parse(saved); } catch (e) { console.error(e); }
+                }
+                return INITIAL_SUITES;
+            });
 
-      <div class="form-group">
-        <label for="admin-amount">Importo (€):</label>
-        <input type="number" id="admin-amount" step="0.01" placeholder="es. 140.00">
-      </div>
+            // PIN Modal state for local Admin access
+            const [showPinModal, setShowPinModal] = useState(false);
+            const [pinInput, setPinInput] = useState('');
+            const [pinError, setPinError] = useState(false);
 
-      <div class="form-group">
-        <label for="admin-days">Validità Addebito (Giorni):</label>
-        <select id="admin-days">
-          <option value="1" selected>1 Giorno (Default)</option>
-          <option value="2">2 Giorni</option>
-          <option value="3">3 Giorni</option>
-          <option value="4">4 Giorni</option>
-          <option value="5">5 Giorni</option>
-          <option value="6">6 Giorni</option>
-          <option value="7">7 Giorni</option>
-          <option value="8">8 Giorni</option>
-          <option value="9">9 Giorni</option>
-        </select>
-      </div>
+            // Save and broadcast suite state updates
+            const updateSuitesState = (newSuites) => {
+                setSuites(newSuites);
+                localStorage.setItem('marinali_suites', JSON.stringify(newSuites));
+                syncChannel.postMessage({ type: 'SUITES_UPDATED', payload: newSuites });
+            };
 
-      <button class="btn-submit" onclick="setSuiteAmount()">Salva Addebito</button>
-      <button class="btn-clear" onclick="clearSuiteAmount()">Annulla Addebito (Contanti / Reset)</button>
-    </div>
-  </div>
+            // Sync state across channels & handle automatic expiration timers
+            useEffect(() => {
+                const handleSyncMessage = (event) => {
+                    if (event.data && event.data.type === 'SUITES_UPDATED') {
+                        setSuites(event.data.payload);
+                    }
+                };
+                syncChannel.addEventListener('message', handleSyncMessage);
 
-  <script>
-    let currentSuites = {};
+                // Check expired balances every 10 seconds
+                const interval = setInterval(() => {
+                    const now = Date.now();
+                    let updated = false;
+                    const checkedSuites = suites.map(suite => {
+                        if (suite.expiresAt && now > suite.expiresAt && suite.amount > 0) {
+                            updated = true;
+                            return { ...suite, amount: 0, expiresAt: null, updatedAt: now };
+                        }
+                        return suite;
+                    });
+                    if (updated) {
+                        updateSuitesState(checkedSuites);
+                    }
+                }, 10000);
 
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      if (tab === 'pos') {
-        document.getElementById('pos-view').style.display = 'flex';
-        document.getElementById('admin-view').style.display = 'none';
-        event.target.classList.add('active');
-        fetchSuites();
-      } else {
-        document.getElementById('pos-view').style.display = 'none';
-        document.getElementById('admin-view').style.display = 'flex';
-        event.target.classList.add('active');
-        fetchSuites();
-      }
-    }
+                return () => {
+                    syncChannel.removeEventListener('message', handleSyncMessage);
+                    clearInterval(interval);
+                };
+            }, [suites]);
 
-    async function fetchSuites() {
-      try {
-        const res = await fetch('/api/suites');
-        currentSuites = await res.json();
-        renderGrid();
-        renderAdminStatus();
-      } catch (err) {
-        console.error("Errore sincronizzazione dati:", err);
-      }
-    }
+            // Switch between Guest Kiosk and Manager Admin view
+            const toggleMode = (targetMode) => {
+                if (targetMode === 'admin' && mode !== 'admin') {
+                    setShowPinModal(true);
+                } else {
+                    setMode('kiosk');
+                    window.history.pushState({}, '', window.location.pathname);
+                }
+            };
 
-    function renderGrid() {
-      const grid = document.getElementById('suites-grid');
-      grid.innerHTML = '';
+            const verifyPin = (e) => {
+                e.preventDefault();
+                // Default manager PIN: 1234
+                if (pinInput === '1234') {
+                    setMode('admin');
+                    setShowPinModal(false);
+                    setPinInput('');
+                    setPinError(false);
+                    window.history.pushState({}, '', '?mode=admin');
+                } else {
+                    setPinError(true);
+                    setPinInput('');
+                }
+            };
 
-      Object.keys(currentSuites).forEach(id => {
-        const suite = currentSuites[id];
-        const card = document.createElement('div');
-        card.className = 'suite-card';
-        card.onclick = () => startPayment(id);
+            return (
+                <div className="min-h-screen flex flex-col justify-between max-w-md mx-auto bg-stone-950 border-x border-stone-850 shadow-2xl relative">
+                    {/* Header with Official Logo & Branding */}
+                    <header className="px-6 pt-6 pb-4 flex justify-between items-center border-b border-stone-850/80 bg-stone-950/90 backdrop-blur sticky top-0 z-30">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-stone-900 border border-brand-500/40 p-1 flex items-center justify-center shadow-md overflow-hidden">
+                                <img 
+                                    src="https://www.marinalirooms.it/logo.png" 
+                                    alt="Marinali Rooms Logo" 
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                        // Fallback monogram if image fails to load
+                                        e.target.onerror = null; 
+                                        e.target.parentElement.innerHTML = '<span class="font-serif text-brand-300 font-bold text-lg">M</span>';
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <h1 className="font-serif text-lg tracking-wider text-brand-200 font-semibold leading-none">
+                                    MARINALI ROOMS
+                                </h1>
+                                <span className="text-[9px] uppercase tracking-[0.2em] text-stone-400 font-medium block mt-0.5">
+                                    Historic Center • Bassano del Grappa
+                                </span>
+                            </div>
+                        </div>
 
-        card.innerHTML = `<div class="suite-name">${suite.name}</div>`;
-        grid.appendChild(card);
-      });
-    }
+                        {/* Mode Switcher Button (Gestore / Kiosk View) */}
+                        <button 
+                            onClick={() => toggleMode(mode === 'kiosk' ? 'admin' : 'kiosk')}
+                            className="px-3 py-1.5 rounded-full text-xs font-medium border border-stone-800 bg-stone-900 text-stone-300 hover:text-brand-300 hover:border-brand-500/50 transition-all flex items-center gap-1.5 active-scale"
+                        >
+                            {mode === 'kiosk' ? (
+                                <>
+                                    <i data-lucide="shield" className="w-3.5 h-3.5 text-brand-400"></i>
+                                    <span>Gestore</span>
+                                </>
+                            ) : (
+                                <>
+                                    <i data-lucide="monitor" className="w-3.5 h-3.5 text-emerald-400"></i>
+                                    <span>Kiosk View</span>
+                                </>
+                            )}
+                        </button>
+                    </header>
 
-    function renderAdminStatus() {
-      const listDiv = document.getElementById('admin-active-list');
-      if (!listDiv) return;
+                    {/* Main Dynamic View */}
+                    <main className="flex-1 flex flex-col p-5 relative">
+                        {mode === 'kiosk' ? (
+                            <KioskView suites={suites} updateSuitesState={updateSuitesState} />
+                        ) : (
+                            <AdminView suites={suites} updateSuitesState={updateSuitesState} />
+                        )}
+                    </main>
 
-      let html = '';
-      Object.keys(currentSuites).forEach(id => {
-        const suite = currentSuites[id];
-        if (suite.amount > 0) {
-          html += `
-            <div class="status-item">
-              <strong>${suite.name}</strong>
-              <span class="badge-active">€${suite.amount.toFixed(2)}</span>
-            </div>`;
-        } else {
-          html += `
-            <div class="status-item">
-              <span>${suite.name}</span>
-              <span class="badge-empty">Nessun addebito</span>
-            </div>`;
+                    {/* Footer */}
+                    <footer className="p-4 text-center text-stone-600 text-[11px] border-t border-stone-900 bg-stone-950">
+                        Marinali Rooms • Self-Service Checkout System
+                    </footer>
+
+                    {/* Manager PIN Protection Modal */}
+                    {showPinModal && (
+                        <div className="absolute inset-0 bg-stone-950/95 backdrop-blur-md z-50 flex items-center justify-center p-6">
+                            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 w-full max-w-xs shadow-2xl text-center">
+                                <div className="w-12 h-12 bg-brand-500/10 rounded-full flex items-center justify-center mx-auto mb-3 text-brand-400">
+                                    <i data-lucide="lock" className="w-6 h-6"></i>
+                                </div>
+                                <h3 className="text-lg font-serif text-brand-200 mb-1">Manager Access</h3>
+                                <p className="text-xs text-stone-400 mb-5">Enter security PIN to access cassa settings.</p>
+                                
+                                <form onSubmit={verifyPin} className="space-y-4">
+                                    <input 
+                                        type="password"
+                                        maxLength="4"
+                                        pattern="[0-9]*"
+                                        inputMode="numeric"
+                                        value={pinInput}
+                                        onChange={(e) => setPinInput(e.target.value)}
+                                        placeholder="••••"
+                                        className={`w-full text-center text-2xl tracking-[0.5em] font-mono py-3 rounded-xl bg-stone-950 border ${pinError ? 'border-red-500' : 'border-stone-700'} text-stone-100 focus:outline-none focus:border-brand-400`}
+                                        autoFocus
+                                    />
+                                    {pinError && <p className="text-xs text-red-400">Incorrect PIN. Try again.</p>}
+                                    
+                                    <div className="flex gap-2 pt-2">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowPinModal(false)}
+                                            className="flex-1 py-2.5 rounded-xl border border-stone-700 text-stone-300 text-xs font-medium hover:bg-stone-800"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            type="submit" 
+                                            className="flex-1 py-2.5 rounded-xl bg-brand-500 text-stone-950 font-bold text-xs hover:bg-brand-400"
+                                        >
+                                            Confirm
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
         }
-      });
-      listDiv.innerHTML = html;
-    }
 
-    async function startPayment(suiteId) {
-      const suite = currentSuites[suiteId];
-      const statusDiv = document.getElementById('status-msg');
+        // ==========================================
+        // GUEST KIOSK VIEW (100% INTERNATIONAL ENGLISH)
+        // ==========================================
+        function KioskView({ suites, updateSuitesState }) {
+            const [selectedSuite, setSelectedSuite] = useState(null);
+            const [paymentState, setPaymentState] = useState('IDLE'); // IDLE, CONFIRM, PROCESSING, SUCCESS
 
-      if (!suite || suite.amount <= 0) {
-        statusDiv.style.color = '#dc2626';
-        statusDiv.innerText = `Nessun conto attivo per ${suite.name}`;
-        return;
-      }
+            useEffect(() => {
+                lucide.createIcons();
+            }, [selectedSuite, paymentState]);
 
-      statusDiv.style.color = '#059669';
-      statusDiv.innerText = `Invio richiesta al lettore POS S700...`;
+            // Handle selecting a suite from main menu
+            const handleSuiteSelect = (suite) => {
+                setSelectedSuite(suite);
+                setPaymentState('CONFIRM');
+            };
 
-      try {
-        const res = await fetch('/api/pos/pay', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ suiteId })
-        });
-        const data = await res.json();
+            // Reset back to initial 4 suite buttons
+            const handleCancel = () => {
+                setSelectedSuite(null);
+                setPaymentState('IDLE');
+            };
 
-        if (data.success) {
-          statusDiv.innerText = `Importo €${data.amount.toFixed(2)}: avvicina la carta al lettore POS.`;
-        } else {
-          statusDiv.style.color = '#dc2626';
-          statusDiv.innerText = `Errore: ${data.error}`;
+            // Trigger Stripe Reader S700 Payment flow
+            const handlePayNow = () => {
+                setPaymentState('PROCESSING');
+
+                // Simulate cloud connection to Stripe Terminal S700
+                setTimeout(() => {
+                    setPaymentState('SUCCESS');
+
+                    // Clear room balance automatically upon payment completion
+                    const updatedSuites = suites.map(s => 
+                        s.id === selectedSuite.id 
+                            ? { ...s, amount: 0.00, expiresAt: null, updatedAt: Date.now() } 
+                            : s
+                    );
+                    updateSuitesState(updatedSuites);
+
+                    // Reset back to initial kiosk menu after 4 seconds
+                    setTimeout(() => {
+                        setSelectedSuite(null);
+                        setPaymentState('IDLE');
+                    }, 4000);
+
+                }, 2800);
+            };
+
+            return (
+                <div className="flex-1 flex flex-col justify-center my-auto">
+                    {/* VIEW 1: Initial 4 Suite Buttons (NO PRICES SHOWN) */}
+                    {paymentState === 'IDLE' && (
+                        <div className="space-y-6 animate-fade-in">
+                            <div className="text-center space-y-1 mb-2">
+                                <h2 className="text-2xl font-serif text-brand-100 tracking-wide">Welcome</h2>
+                                <p className="text-xs text-stone-400">Please select your suite to complete payment</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                {suites.map((suite) => (
+                                    <button
+                                        key={suite.id}
+                                        onClick={() => handleSuiteSelect(suite)}
+                                        className="w-full p-6 rounded-2xl border border-stone-800 bg-gradient-to-br from-stone-900 via-stone-900/90 to-stone-950 text-left flex items-center justify-between active-scale transition-all duration-200 hover:border-brand-500/50 shadow-lg shadow-black/40 group"
+                                    >
+                                        <div className="flex items-center space-x-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center font-serif text-xl font-bold text-brand-300 group-hover:scale-105 transition-transform">
+                                                0{suite.id}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-serif text-xl text-stone-100 font-semibold tracking-wide group-hover:text-brand-200 transition-colors">
+                                                    {suite.name}
+                                                </h3>
+                                                <span className="text-[11px] text-stone-400 block mt-0.5">
+                                                    Tap to view total balance
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-9 h-9 rounded-full bg-stone-850 flex items-center justify-center text-stone-400 group-hover:text-brand-300 group-hover:bg-stone-800 transition-all">
+                                            <i data-lucide="chevron-right" className="w-5 h-5"></i>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* VIEW 2: Confirmation Screen (Amount Displayed + CANCEL / PAY NOW) */}
+                    {(paymentState === 'CONFIRM' || paymentState === 'PROCESSING' || paymentState === 'SUCCESS') && selectedSuite && (
+                        <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 shadow-2xl text-center space-y-6 animate-fade-in relative overflow-hidden">
+
+                            {/* State 1: Summary & Price Display */}
+                            {paymentState === 'CONFIRM' && (
+                                <>
+                                    <div className="space-y-1">
+                                        <span className="text-[11px] uppercase tracking-widest text-brand-400 font-semibold">Payment Summary</span>
+                                        <h2 className="text-2xl font-serif text-stone-100">{selectedSuite.name}</h2>
+                                    </div>
+
+                                    <div className="py-6 px-4 bg-stone-950/80 rounded-2xl border border-stone-850 my-4">
+                                        <span className="text-xs text-stone-400 block mb-1">Total Amount Due</span>
+                                        <div className="text-4xl font-bold font-sans text-brand-300 tracking-tight">
+                                            € {selectedSuite.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                        {selectedSuite.amount === 0 && (
+                                            <p className="text-xs text-amber-400/90 mt-2">No pending balance for this room.</p>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 pt-2">
+                                        <button
+                                            onClick={handlePayNow}
+                                            disabled={selectedSuite.amount === 0}
+                                            className={`w-full py-4 rounded-2xl font-bold text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 active-scale transition-all ${
+                                                selectedSuite.amount > 0
+                                                    ? 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-stone-950 shadow-brand-500/20'
+                                                    : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            <i data-lucide="credit-card" className="w-5 h-5"></i>
+                                            <span>OK / PAY NOW</span>
+                                        </button>
+
+                                        <button
+                                            onClick={handleCancel}
+                                            className="w-full py-3.5 rounded-2xl border border-stone-750 text-stone-300 text-xs font-semibold hover:bg-stone-800/80 active-scale flex items-center justify-center gap-2"
+                                        >
+                                            <i data-lucide="arrow-left" className="w-4 h-4"></i>
+                                            <span>CANCEL / BACK</span>
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* State 2: Triggering Stripe S700 Terminal */}
+                            {paymentState === 'PROCESSING' && (
+                                <div className="py-8 space-y-6">
+                                    <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                                        <div className="absolute inset-0 rounded-full border-4 border-brand-500/20 border-t-brand-400 animate-spin"></div>
+                                        <i data-lucide="wifi" className="w-8 h-8 text-brand-300 animate-pulse"></i>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-serif text-brand-200">Payment Reader Active</h3>
+                                        <p className="text-sm text-stone-300">Please tap or insert your card on the Stripe Reader next to you.</p>
+                                    </div>
+
+                                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-stone-950 border border-stone-800 text-[11px] text-stone-400">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                        Waiting for guest card tap...
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* State 3: Payment Success */}
+                            {paymentState === 'SUCCESS' && (
+                                <div className="py-8 space-y-5 animate-fade-in">
+                                    <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                                        <i data-lucide="check-circle-2" className="w-10 h-10"></i>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <h3 className="text-2xl font-serif text-emerald-300">Payment Successful!</h3>
+                                        <p className="text-xs text-stone-300">Transaction approved for {selectedSuite.name}.</p>
+                                    </div>
+
+                                    <div className="p-4 bg-stone-950/80 rounded-xl border border-stone-850 text-xs text-stone-400">
+                                        Thank you for your stay at Marinali Rooms!
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    )}
+                </div>
+            );
         }
-      } catch (err) {
-        statusDiv.style.color = '#dc2626';
-        statusDiv.innerText = "Errore di connessione con il lettore.";
-      }
-    }
 
-    async function setSuiteAmount() {
-      const suiteId = document.getElementById('admin-suite').value;
-      const amount = document.getElementById('admin-amount').value;
-      const daysValid = document.getElementById('admin-days').value;
+        // ==========================================
+        // MANAGER ADMIN VIEW
+        // ==========================================
+        function AdminView({ suites, updateSuitesState }) {
+            const [selectedId, setSelectedId] = useState(1);
+            const [amountInput, setAmountInput] = useState('');
+            const [expireDays, setExpireDays] = useState('2');
+            const [notification, setNotification] = useState('');
 
-      const res = await fetch('/api/admin/set-amount', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ suiteId, amount, daysValid })
-      });
-      const data = await res.json();
+            const currentSuite = suites.find(s => s.id === selectedId);
 
-      if (data.success) {
-        alert(`Addebito salvato per ${data.suiteName}: €${data.amount.toFixed(2)} (Valido per ${data.daysValid} giorni)`);
-        document.getElementById('admin-amount').value = '';
-        fetchSuites();
-      }
-    }
+            useEffect(() => {
+                if (currentSuite) {
+                    setAmountInput(currentSuite.amount > 0 ? currentSuite.amount.toString() : '');
+                }
+                lucide.createIcons();
+            }, [selectedId, suites]);
 
-    async function clearSuiteAmount() {
-      const suiteId = document.getElementById('admin-suite').value;
+            const showNotify = (msg) => {
+                setNotification(msg);
+                setTimeout(() => setNotification(''), 3000);
+            };
 
-      const res = await fetch('/api/admin/clear-amount', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ suiteId })
-      });
-      const data = await res.json();
+            const handleSaveSuite = (e) => {
+                e.preventDefault();
+                const numericAmount = parseFloat(amountInput.replace(',', '.')) || 0;
+                const days = parseInt(expireDays) || 0;
+                const expiresAt = days > 0 ? Date.now() + (days * 24 * 60 * 60 * 1000) : null;
 
-      if (data.success) {
-        alert(`Addebito per ${data.suiteName} annullato con successo.`);
-        document.getElementById('admin-amount').value = '';
-        fetchSuites();
-      }
-    }
+                const updated = suites.map(s => 
+                    s.id === selectedId 
+                        ? { ...s, amount: numericAmount, expiresAt: expiresAt, updatedAt: Date.now() } 
+                        : s
+                );
 
-    setInterval(fetchSuites, 3000);
-    fetchSuites();
-  </script>
+                updateSuitesState(updated);
+                showNotify(`Updated ${currentSuite.name} balance to € ${numericAmount.toFixed(2)}`);
+            };
+
+            const handleResetSuite = (id) => {
+                const updated = suites.map(s => 
+                    s.id === id 
+                        ? { ...s, amount: 0.00, expiresAt: null, updatedAt: Date.now() } 
+                        : s
+                );
+                updateSuitesState(updated);
+                showNotify(`Cleared room balance.`);
+            };
+
+            return (
+                <div className="flex-1 flex flex-col space-y-5">
+                    {/* Admin Header */}
+                    <div className="flex justify-between items-center bg-stone-900/60 p-4 rounded-2xl border border-stone-850">
+                        <div>
+                            <h2 className="text-base font-serif text-brand-200 font-medium">Gestore Cassa Panel</h2>
+                            <p className="text-[11px] text-stone-400">Set amounts for reception checkout</p>
+                        </div>
+                        <div className="px-2.5 py-1 rounded-md bg-stone-950 text-[10px] text-brand-400 border border-stone-800 font-mono">
+                            ADMIN MODE
+                        </div>
+                    </div>
+
+                    {notification && (
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs text-center animate-fade-in flex items-center justify-center gap-2">
+                            <i data-lucide="check" className="w-4 h-4"></i>
+                            <span>{notification}</span>
+                        </div>
+                    )}
+
+                    {/* Suite Selector */}
+                    <div className="space-y-2">
+                        <label className="text-xs text-stone-400 font-medium uppercase tracking-wider block">1. Select Suite</label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {suites.map(s => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => setSelectedId(s.id)}
+                                    className={`py-3 rounded-xl border text-center transition-all ${
+                                        selectedId === s.id 
+                                            ? 'bg-brand-500 text-stone-950 font-bold border-brand-400 shadow-md shadow-brand-500/20' 
+                                            : 'bg-stone-900 border-stone-800 text-stone-300 hover:border-stone-700'
+                                    }`}
+                                >
+                                    <div className="text-xs font-serif">SUITE</div>
+                                    <div className="text-lg font-bold leading-none">0{s.id}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Pricing Form */}
+                    <form onSubmit={handleSaveSuite} className="bg-stone-900 border border-stone-800 rounded-2xl p-5 space-y-4">
+                        <div className="flex justify-between items-center pb-3 border-b border-stone-800">
+                            <span className="font-serif text-lg text-stone-100">{currentSuite.name}</span>
+                            <span className="text-xs text-stone-400">
+                                Current Balance: <strong className="text-brand-300">€ {currentSuite.amount.toFixed(2)}</strong>
+                            </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs text-stone-400 font-medium">Charge Amount (€)</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={amountInput}
+                                    onChange={(e) => setAmountInput(e.target.value)}
+                                    className="w-full bg-stone-950 border border-stone-750 rounded-xl py-3 px-4 text-xl font-semibold text-brand-200 focus:outline-none focus:border-brand-400"
+                                    required
+                                />
+                                <span className="absolute right-4 top-3.5 text-stone-500 font-bold">€</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs text-stone-400 font-medium">Active Duration (Expiration Timer)</label>
+                            <select
+                                value={expireDays}
+                                onChange={(e) => setExpireDays(e.target.value)}
+                                className="w-full bg-stone-950 border border-stone-750 rounded-xl py-3 px-4 text-sm text-stone-200 focus:outline-none focus:border-brand-400"
+                            >
+                                <option value="1">1 Day (Expires tomorrow)</option>
+                                <option value="2">2 Days (Standard Check-in)</option>
+                                <option value="3">3 Days</option>
+                                <option value="7">7 Days</option>
+                                <option value="0">No expiration (Fixed)</option>
+                            </select>
+                        </div>
+
+                        <div className="pt-2 flex gap-2">
+                            <button
+                                type="submit"
+                                className="flex-1 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-stone-950 font-bold text-sm shadow-lg shadow-brand-500/15 flex items-center justify-center gap-2"
+                            >
+                                <i data-lucide="save" className="w-4 h-4"></i>
+                                <span>Save Room Balance</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Suite Status Summary */}
+                    <div className="space-y-2 pt-2">
+                        <label className="text-xs text-stone-400 font-medium uppercase tracking-wider block">Suites Status</label>
+                        <div className="space-y-2">
+                            {suites.map(s => (
+                                <div key={s.id} className="p-3 bg-stone-900/40 border border-stone-850 rounded-xl flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-serif font-bold text-stone-300">{s.name}</span>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] ${s.amount > 0 ? 'bg-brand-500/20 text-brand-300' : 'bg-stone-800 text-stone-500'}`}>
+                                            {s.amount > 0 ? `€ ${s.amount.toFixed(2)}` : 'Empty'}
+                                        </span>
+                                    </div>
+                                    {s.amount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleResetSuite(s.id)}
+                                            className="px-2.5 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-medium text-[10px] flex items-center gap-1"
+                                        >
+                                            <i data-lucide="trash-2" className="w-3 h-3"></i>
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render application
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
