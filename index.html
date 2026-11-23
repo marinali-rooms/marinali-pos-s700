@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Marinali Rooms — Terminal Payment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased select-none">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const INITIAL_PRICES = {
+      'Suite 1': 0,
+      'Suite 2': 0,
+      'Suite 3': 0,
+      'Suite 4': 0
+    };
+
+    function App() {
+      const [mode, setMode] = useState('kiosk'); // 'kiosk' or 'admin'
+      const [prices, setPrices] = useState(INITIAL_PRICES);
+      const [selectedSuite, setSelectedSuite] = useState(null);
+      const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle', 'confirm', 'processing', 'success', 'error'
+      const [errorMessage, setErrorMessage] = useState('');
+      const [pinInput, setPinInput] = useState('');
+      const [showPinModal, setShowPinModal] = useState(false);
+
+      // Load initial mode and state
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'admin') setMode('admin');
+
+        const savedPrices = localStorage.getItem('marinali_prices');
+        if (savedPrices) setPrices(JSON.parse(savedPrices));
+
+        // Real-time broadcast synchronization
+        const channel = new BroadcastChannel('marinali_pos_channel');
+        channel.onmessage = (event) => {
+          if (event.data.type === 'PRICES_UPDATED') {
+            setPrices(event.data.prices);
+          }
+        };
+        return () => channel.close();
+      }, []);
+
+      const updatePrice = (suite, price) => {
+        const updated = { ...prices, [suite]: parseFloat(price) || 0 };
+        setPrices(updated);
+        localStorage.setItem('marinali_prices', JSON.stringify(updated));
+        
+        const channel = new BroadcastChannel('marinali_pos_channel');
+        channel.postMessage({ type: 'PRICES_UPDATED', prices: updated });
+        channel.close();
+      };
+
+      const handleAdminAccess = () => {
+        if (pinInput === '1953') { // PIN predefinito
+          setMode('admin');
+          setShowPinModal(false);
+          setPinInput('');
+        } else {
+          alert('Incorrect PIN');
+          setPinInput('');
+        }
+      };
+
+      const executeStripePayment = async (suite, amount) => {
+        setPaymentStatus('processing');
+        setErrorMessage('');
+
+        try {
+          // Chiamata all'endpoint serverless su Vercel
+          const response = await fetch('/api/stripe-terminal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ suite, amount })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            setPaymentStatus('success');
+            // Azzera l'importo della suite pagata
+            updatePrice(suite, 0);
+
+            setTimeout(() => {
+              setPaymentStatus('idle');
+              setSelectedSuite(null);
+            }, 4000);
+          } else {
+            throw new Error(data.message || 'Payment failed on reader');
+          }
+        } catch (err) {
+          setPaymentStatus('error');
+          setErrorMessage(err.message);
+          setTimeout(() => setPaymentStatus('confirm'), 4000);
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative">
+          {/* Header col Logo */}
+          <header className="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div>
+              <h1 className="text-xl font-bold tracking-wider uppercase text-amber-400">Marinali Rooms</h1>
+              <p className="text-xs text-slate-400">Historic Center • Bassano del Grappa</p>
+            </div>
+            {mode === 'kiosk' ? (
+              <button 
+                onClick={() => setShowPinModal(true)}
+                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700"
+              >
+                Gestore
+              </button>
+            ) : (
+              <button 
+                onClick={() => setMode('kiosk')}
+                className="text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-500/30 font-medium"
+              >
+                Exit Admin
+              </button>
+            )}
+          </header>
+
+          {/* VISTA KIOSK / OSPITE */}
+          {mode === 'kiosk' && (
+            <main className="flex-1 flex flex-col justify-center py-6">
+              {paymentStatus === 'idle' && (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-semibold text-slate-100">Welcome</h2>
+                    <p className="text-sm text-slate-400 mt-1">Please select your suite to complete checkout</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {Object.keys(prices).map((suite) => (
+                      <button
+                        key={suite}
+                        onClick={() => {
+                          setSelectedSuite(suite);
+                          setPaymentStatus('confirm');
+                        }}
+                        className="w-full py-5 px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 active:scale-[0.98] transition-all flex justify-between items-center shadow-lg"
+                      >
+                        <span className="text-lg font-medium text-slate-100">{suite}</span>
+                        <span className="text-slate-400 text-sm">Select &rarr;</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* RIEPILOGO PREZZO E CONFIRMA */}
+              {paymentStatus === 'confirm' && (
+                <div className="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
+                      Selected Chamber
+                    </span>
+                    <h2 className="text-3xl font-bold text-slate-100 mt-3">{selectedSuite}</h2>
+                  </div>
+
+                  <div className="py-4 border-y border-slate-700/80">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">Total Amount Due</p>
+                    <p className="text-4xl font-extrabold text-amber-400 mt-1">
+                      € {prices[selectedSuite]?.toFixed(2)}
+                    </p>
+                  </div>
+
+                  {prices[selectedSuite] > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <button
+                        onClick={() => {
+                          setPaymentStatus('idle');
+                          setSelectedSuite(null);
+                        }}
+                        className="w-full py-4 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-medium active:scale-95 transition-all text-sm"
+                      >
+                        CANCEL / BACK
+                      </button>
+                      <button
+                        onClick={() => executeStripePayment(selectedSuite, prices[selectedSuite])}
+                        className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold active:scale-95 transition-all text-sm shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                      >
+                        OK / PAY NOW
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-xs text-slate-400">No balance pending for this suite.</p>
+                      <button
+                        onClick={() => {
+                          setPaymentStatus('idle');
+                          setSelectedSuite(null);
+                        }}
+                        className="w-full py-3 rounded-xl bg-slate-700 text-slate-200 font-medium text-sm"
+                      >
+                        BACK TO SUITES
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* STATO PROCESSAMENTO S700 */}
+              {paymentStatus === 'processing' && (
+                <div className="text-center py-12 bg-slate-800/90 border border-slate-700 rounded-3xl p-6 space-y-6">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent"></div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-100">Ready on Reader</h3>
+                    <p className="text-sm text-slate-400 mt-2 px-4">
+                      Please tap, insert, or swipe your card on the Stripe S700 terminal next to you.
+                    </p>
+                  </div>
+                  <div className="text-xs text-amber-400/80 bg-amber-400/5 py-2 rounded-lg border border-amber-400/10">
+                    Amount: € {prices[selectedSuite]?.toFixed(2)}
+                  </div>
+                </div>
+              )}
+
+              {/* STATO ESITO POSITIVO */}
+              {paymentStatus === 'success' && (
+                <div className="text-center py-12 bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-6 space-y-4">
+                  <div className="text-5xl">✓</div>
+                  <h3 className="text-2xl font-bold text-emerald-400">Payment Successful</h3>
+                  <p className="text-sm text-slate-300">
+                    Thank you for your stay at Marinali Rooms!
+                  </p>
+                </div>
+              )}
+
+              {/* STATO ERRORE */}
+              {paymentStatus === 'error' && (
+                <div className="text-center py-8 bg-rose-950/40 border border-rose-500/30 rounded-3xl p-6 space-y-4">
+                  <h3 className="text-xl font-bold text-rose-400">Transaction Failed</h3>
+                  <p className="text-xs text-slate-300">{errorMessage}</p>
+                </div>
+              )}
+            </main>
+          )}
+
+          {/* VISTA GESTORE / ADMIN */}
+          {mode === 'admin' && (
+            <main className="flex-1 py-6 space-y-6">
+              <div className="border-b border-slate-800 pb-3">
+                <h2 className="text-lg font-bold text-amber-400">Pannello Gestore</h2>
+                <p className="text-xs text-slate-400">Imposta gli importi da saldare per gli ospiti in arrivo</p>
+              </div>
+
+              <div className="space-y-4">
+                {Object.keys(prices).map((suite) => (
+                  <div key={suite} className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-slate-200">{suite}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400 text-sm">€</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={prices[suite]}
+                        onChange={(e) => updatePrice(suite, e.target.value)}
+                        className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-right font-mono text-amber-400 font-bold focus:outline-none focus:border-amber-400"
+                      />
+                      <button
+                        onClick={() => updatePrice(suite, 0)}
+                        className="text-xs text-slate-500 hover:text-rose-400 px-2 py-1"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </main>
+          )}
+
+          {/* MODALE PIN GESTORE */}
+          {showPinModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4">
+                <h3 className="font-semibold text-slate-200">Inserisci PIN Gestore</h3>
+                <input
+                  type="password"
+                  maxLength="4"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  className="w-full text-center text-2xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-2 text-amber-400 focus:outline-none focus:border-amber-400"
+                  placeholder="••••"
+                  autoFocus
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { setShowPinModal(false); setPinInput(''); }}
+                    className="py-2 bg-slate-700 text-slate-300 rounded-lg text-sm"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleAdminAccess}
+                    className="py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-sm"
+                  >
+                    Entra
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <footer className="text-center text-[10px] text-slate-600 border-t border-slate-800/60 pt-3">
+            Marinali Rooms Checkout System • Powered by Stripe Terminal
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
