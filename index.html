@@ -57,7 +57,7 @@
       };
 
       const handleAdminAccess = () => {
-        if (pinInput === '1953') {
+        if (pinInput === '1234') {
           setMode('admin');
           setShowPinModal(false);
           setPinInput('');
@@ -65,6 +65,18 @@
           alert('Incorrect PIN');
           setPinInput('');
         }
+      };
+
+      const cancelReaderAction = async () => {
+        try {
+          await fetch('/api/stripe-terminal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'cancel' })
+          });
+        } catch (e) {}
+        setPaymentStatus('idle');
+        setSelectedSuite(null);
       };
 
       const executeStripePayment = async (suite, amount) => {
@@ -87,18 +99,17 @@
             setTimeout(() => {
               setPaymentStatus('idle');
               setSelectedSuite(null);
-            }, 4000);
+            }, 5000);
           } else {
             throw new Error(data.message || 'Payment failed on Stripe Terminal.');
           }
         } catch (err) {
           setPaymentStatus('error');
-          setErrorMessage(err.message || 'Unable to connect to Stripe Reader S700.');
+          setErrorMessage(err.message || 'Transaction could not be completed.');
         }
       };
 
       return h('div', { className: 'min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative' },
-        // Header
         h('header', { className: 'flex justify-between items-center border-b border-slate-800 pb-4' },
           h('div', null,
             h('h1', { className: 'text-xl font-bold tracking-wider uppercase text-amber-400' }, 'Marinali Rooms'),
@@ -115,7 +126,6 @@
               }, 'Exit Admin')
         ),
 
-        // Kiosk Mode
         mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col justify-center py-6' },
           paymentStatus === 'idle' && h('div', { className: 'space-y-4' },
             h('div', { className: 'text-center mb-6' },
@@ -169,8 +179,12 @@
             h('div', { className: 'inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent' }),
             h('div', null,
               h('h3', { className: 'text-xl font-bold text-slate-100' }, 'Ready on Reader'),
-              h('p', { className: 'text-sm text-slate-400 mt-2 px-4' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal next to you.')
-            )
+              h('p', { className: 'text-sm text-slate-400 mt-2 px-4' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal.')
+            ),
+            h('button', {
+              onClick: cancelReaderAction,
+              className: 'mt-4 text-xs text-rose-400 hover:text-rose-300 underline'
+            }, 'Cancel Transaction')
           ),
 
           paymentStatus === 'success' && h('div', { className: 'text-center py-12 bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-6 space-y-4' },
@@ -185,13 +199,12 @@
               h('p', { className: 'text-xs text-slate-300 mt-2 px-4' }, errorMessage)
             ),
             h('button', {
-              onClick: () => setPaymentStatus('confirm'),
+              onClick: cancelReaderAction,
               className: 'py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700'
-            }, 'Try Again')
+            }, 'Back to Home')
           )
         ),
 
-        // Admin Mode
         mode === 'admin' && h('main', { className: 'flex-1 py-6 space-y-6' },
           h('div', { className: 'border-b border-slate-800 pb-3' },
             h('h2', { className: 'text-lg font-bold text-amber-400' }, 'Pannello Gestore'),
@@ -220,7 +233,6 @@
           )
         ),
 
-        // PIN Modal
         showPinModal && h('div', { className: 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50' },
           h('div', { className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4' },
             h('h3', { className: 'font-semibold text-slate-200' }, 'Inserisci PIN Gestore'),
@@ -246,7 +258,6 @@
           )
         ),
 
-        // Footer
         h('footer', { className: 'text-center text-[10px] text-slate-600 border-t border-slate-800/60 pt-3' },
           'Marinali Rooms Checkout System • Powered by Stripe Terminal'
         )
