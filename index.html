@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Marinali Rooms — Terminal Payment</title>
+  <title>Marinali Rooms — Kiosk Payment</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased select-none">
   <div id="root"></div>
@@ -24,7 +23,7 @@
     };
 
     function App() {
-      const [mode, setMode] = useState('kiosk'); // 'kiosk' or 'admin'
+      const [mode, setMode] = useState('kiosk');
       const [prices, setPrices] = useState(INITIAL_PRICES);
       const [selectedSuite, setSelectedSuite] = useState(null);
       const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle', 'confirm', 'processing', 'success', 'error'
@@ -32,7 +31,6 @@
       const [pinInput, setPinInput] = useState('');
       const [showPinModal, setShowPinModal] = useState(false);
 
-      // Load initial mode and state
       useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'admin') setMode('admin');
@@ -40,7 +38,6 @@
         const savedPrices = localStorage.getItem('marinali_prices');
         if (savedPrices) setPrices(JSON.parse(savedPrices));
 
-        // Real-time broadcast synchronization
         const channel = new BroadcastChannel('marinali_pos_channel');
         channel.onmessage = (event) => {
           if (event.data.type === 'PRICES_UPDATED') {
@@ -61,7 +58,7 @@
       };
 
       const handleAdminAccess = () => {
-        if (pinInput === '1953') { // PIN predefinito
+        if (pinInput === '1953') {
           setMode('admin');
           setShowPinModal(false);
           setPinInput('');
@@ -76,7 +73,6 @@
         setErrorMessage('');
 
         try {
-          // Chiamata all'endpoint serverless su Vercel
           const response = await fetch('/api/stripe-terminal', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -87,7 +83,6 @@
 
           if (response.ok && data.success) {
             setPaymentStatus('success');
-            // Azzera l'importo della suite pagata
             updatePrice(suite, 0);
 
             setTimeout(() => {
@@ -95,18 +90,16 @@
               setSelectedSuite(null);
             }, 4000);
           } else {
-            throw new Error(data.message || 'Payment failed on reader');
+            throw new Error(data.message || 'Payment failed on Stripe Terminal.');
           }
         } catch (err) {
           setPaymentStatus('error');
-          setErrorMessage(err.message);
-          setTimeout(() => setPaymentStatus('confirm'), 4000);
+          setErrorMessage(err.message || 'Unable to connect to Stripe Reader S700.');
         }
       };
 
       return (
         <div className="min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative">
-          {/* Header col Logo */}
           <header className="flex justify-between items-center border-b border-slate-800 pb-4">
             <div>
               <h1 className="text-xl font-bold tracking-wider uppercase text-amber-400">Marinali Rooms</h1>
@@ -129,14 +122,13 @@
             )}
           </header>
 
-          {/* VISTA KIOSK / OSPITE */}
           {mode === 'kiosk' && (
             <main className="flex-1 flex flex-col justify-center py-6">
               {paymentStatus === 'idle' && (
                 <div className="space-y-4">
                   <div className="text-center mb-6">
                     <h2 className="text-2xl font-semibold text-slate-100">Welcome</h2>
-                    <p className="text-sm text-slate-400 mt-1">Please select your suite to complete checkout</p>
+                    <p className="text-sm text-slate-400 mt-1">Please select your suite to complete payment</p>
                   </div>
                   <div className="grid grid-cols-1 gap-3">
                     {Object.keys(prices).map((suite) => (
@@ -156,12 +148,11 @@
                 </div>
               )}
 
-              {/* RIEPILOGO PREZZO E CONFIRMA */}
               {paymentStatus === 'confirm' && (
                 <div className="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl">
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
-                      Selected Chamber
+                      Selected Suite
                     </span>
                     <h2 className="text-3xl font-bold text-slate-100 mt-3">{selectedSuite}</h2>
                   </div>
@@ -208,7 +199,6 @@
                 </div>
               )}
 
-              {/* STATO PROCESSAMENTO S700 */}
               {paymentStatus === 'processing' && (
                 <div className="text-center py-12 bg-slate-800/90 border border-slate-700 rounded-3xl p-6 space-y-6">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent"></div>
@@ -218,13 +208,9 @@
                       Please tap, insert, or swipe your card on the Stripe S700 terminal next to you.
                     </p>
                   </div>
-                  <div className="text-xs text-amber-400/80 bg-amber-400/5 py-2 rounded-lg border border-amber-400/10">
-                    Amount: € {prices[selectedSuite]?.toFixed(2)}
-                  </div>
                 </div>
               )}
 
-              {/* STATO ESITO POSITIVO */}
               {paymentStatus === 'success' && (
                 <div className="text-center py-12 bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-6 space-y-4">
                   <div className="text-5xl">✓</div>
@@ -235,22 +221,28 @@
                 </div>
               )}
 
-              {/* STATO ERRORE */}
               {paymentStatus === 'error' && (
-                <div className="text-center py-8 bg-rose-950/40 border border-rose-500/30 rounded-3xl p-6 space-y-4">
-                  <h3 className="text-xl font-bold text-rose-400">Transaction Failed</h3>
-                  <p className="text-xs text-slate-300">{errorMessage}</p>
+                <div className="text-center py-8 bg-rose-950/40 border border-rose-500/30 rounded-3xl p-6 space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-rose-400">Transaction Error</h3>
+                    <p className="text-xs text-slate-300 mt-2 px-4">{errorMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => setPaymentStatus('confirm')}
+                    className="py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700"
+                  >
+                    Try Again
+                  </button>
                 </div>
               )}
             </main>
           )}
 
-          {/* VISTA GESTORE / ADMIN */}
           {mode === 'admin' && (
             <main className="flex-1 py-6 space-y-6">
               <div className="border-b border-slate-800 pb-3">
                 <h2 className="text-lg font-bold text-amber-400">Pannello Gestore</h2>
-                <p className="text-xs text-slate-400">Imposta gli importi da saldare per gli ospiti in arrivo</p>
+                <p className="text-xs text-slate-400">Imposta gli importi da saldare per gli ospiti</p>
               </div>
 
               <div className="space-y-4">
@@ -281,7 +273,6 @@
             </main>
           )}
 
-          {/* MODALE PIN GESTORE */}
           {showPinModal && (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4">
