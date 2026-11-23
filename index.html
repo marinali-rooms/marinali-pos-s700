@@ -7,13 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased select-none">
   <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+  <script>
+    const { useState, useEffect, createElement: h } = React;
 
     const INITIAL_PRICES = {
       'Suite 1': 0,
@@ -26,7 +25,7 @@
       const [mode, setMode] = useState('kiosk');
       const [prices, setPrices] = useState(INITIAL_PRICES);
       const [selectedSuite, setSelectedSuite] = useState(null);
-      const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle', 'confirm', 'processing', 'success', 'error'
+      const [paymentStatus, setPaymentStatus] = useState('idle');
       const [errorMessage, setErrorMessage] = useState('');
       const [pinInput, setPinInput] = useState('');
       const [showPinModal, setShowPinModal] = useState(false);
@@ -58,7 +57,7 @@
       };
 
       const handleAdminAccess = () => {
-        if (pinInput === '1953') {
+        if (pinInput === '1234') {
           setMode('admin');
           setShowPinModal(false);
           setPinInput('');
@@ -98,220 +97,163 @@
         }
       };
 
-      return (
-        <div className="min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative">
-          <header className="flex justify-between items-center border-b border-slate-800 pb-4">
-            <div>
-              <h1 className="text-xl font-bold tracking-wider uppercase text-amber-400">Marinali Rooms</h1>
-              <p className="text-xs text-slate-400">Historic Center • Bassano del Grappa</p>
-            </div>
-            {mode === 'kiosk' ? (
-              <button 
-                onClick={() => setShowPinModal(true)}
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700"
-              >
-                Gestore
-              </button>
-            ) : (
-              <button 
-                onClick={() => setMode('kiosk')}
-                className="text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-500/30 font-medium"
-              >
-                Exit Admin
-              </button>
-            )}
-          </header>
+      return h('div', { className: 'min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative' },
+        // Header
+        h('header', { className: 'flex justify-between items-center border-b border-slate-800 pb-4' },
+          h('div', null,
+            h('h1', { className: 'text-xl font-bold tracking-wider uppercase text-amber-400' }, 'Marinali Rooms'),
+            h('p', { className: 'text-xs text-slate-400' }, 'Historic Center • Bassano del Grappa')
+          ),
+          mode === 'kiosk'
+            ? h('button', {
+                onClick: () => setShowPinModal(true),
+                className: 'text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700'
+              }, 'Gestore')
+            : h('button', {
+                onClick: () => setMode('kiosk'),
+                className: 'text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-500/30 font-medium'
+              }, 'Exit Admin')
+        ),
 
-          {mode === 'kiosk' && (
-            <main className="flex-1 flex flex-col justify-center py-6">
-              {paymentStatus === 'idle' && (
-                <div className="space-y-4">
-                  <div className="text-center mb-6">
-                    <h2 className="text-2xl font-semibold text-slate-100">Welcome</h2>
-                    <p className="text-sm text-slate-400 mt-1">Please select your suite to complete payment</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    {Object.keys(prices).map((suite) => (
-                      <button
-                        key={suite}
-                        onClick={() => {
-                          setSelectedSuite(suite);
-                          setPaymentStatus('confirm');
-                        }}
-                        className="w-full py-5 px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 active:scale-[0.98] transition-all flex justify-between items-center shadow-lg"
-                      >
-                        <span className="text-lg font-medium text-slate-100">{suite}</span>
-                        <span className="text-slate-400 text-sm">Select &rarr;</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+        // Kiosk Mode
+        mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col justify-center py-6' },
+          paymentStatus === 'idle' && h('div', { className: 'space-y-4' },
+            h('div', { className: 'text-center mb-6' },
+              h('h2', { className: 'text-2xl font-semibold text-slate-100' }, 'Welcome'),
+              h('p', { className: 'text-sm text-slate-400 mt-1' }, 'Please select your suite to complete payment')
+            ),
+            h('div', { className: 'grid grid-cols-1 gap-3' },
+              Object.keys(prices).map(suite =>
+                h('button', {
+                  key: suite,
+                  onClick: () => { setSelectedSuite(suite); setPaymentStatus('confirm'); },
+                  className: 'w-full py-5 px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 active:scale-[0.98] transition-all flex justify-between items-center shadow-lg'
+                },
+                  h('span', { className: 'text-lg font-medium text-slate-100' }, suite),
+                  h('span', { className: 'text-slate-400 text-sm' }, 'Select →')
+                )
+              )
+            )
+          ),
 
-              {paymentStatus === 'confirm' && (
-                <div className="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
-                      Selected Suite
-                    </span>
-                    <h2 className="text-3xl font-bold text-slate-100 mt-3">{selectedSuite}</h2>
-                  </div>
+          paymentStatus === 'confirm' && h('div', { className: 'bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl' },
+            h('div', null,
+              h('span', { className: 'text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20' }, 'Selected Suite'),
+              h('h2', { className: 'text-3xl font-bold text-slate-100 mt-3' }, selectedSuite)
+            ),
+            h('div', { className: 'py-4 border-y border-slate-700/80' },
+              h('p', { className: 'text-xs text-slate-400 uppercase tracking-wider' }, 'Total Amount Due'),
+              h('p', { className: 'text-4xl font-extrabold text-amber-400 mt-1' }, `€ ${prices[selectedSuite]?.toFixed(2)}`)
+            ),
+            prices[selectedSuite] > 0
+              ? h('div', { className: 'grid grid-cols-2 gap-3 pt-2' },
+                  h('button', {
+                    onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
+                    className: 'w-full py-4 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-medium text-sm'
+                  }, 'CANCEL / BACK'),
+                  h('button', {
+                    onClick: () => executeStripePayment(selectedSuite, prices[selectedSuite]),
+                    className: 'w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20'
+                  }, 'OK / PAY NOW')
+                )
+              : h('div', { className: 'space-y-4' },
+                  h('p', { className: 'text-xs text-slate-400' }, 'No balance pending for this suite.'),
+                  h('button', {
+                    onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
+                    className: 'w-full py-3 rounded-xl bg-slate-700 text-slate-200 font-medium text-sm'
+                  }, 'BACK TO SUITES')
+                )
+          ),
 
-                  <div className="py-4 border-y border-slate-700/80">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Total Amount Due</p>
-                    <p className="text-4xl font-extrabold text-amber-400 mt-1">
-                      € {prices[selectedSuite]?.toFixed(2)}
-                    </p>
-                  </div>
+          paymentStatus === 'processing' && h('div', { className: 'text-center py-12 bg-slate-800/90 border border-slate-700 rounded-3xl p-6 space-y-6' },
+            h('div', { className: 'inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent' }),
+            h('div', null,
+              h('h3', { className: 'text-xl font-bold text-slate-100' }, 'Ready on Reader'),
+              h('p', { className: 'text-sm text-slate-400 mt-2 px-4' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal next to you.')
+            )
+          ),
 
-                  {prices[selectedSuite] > 0 ? (
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button
-                        onClick={() => {
-                          setPaymentStatus('idle');
-                          setSelectedSuite(null);
-                        }}
-                        className="w-full py-4 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-medium active:scale-95 transition-all text-sm"
-                      >
-                        CANCEL / BACK
-                      </button>
-                      <button
-                        onClick={() => executeStripePayment(selectedSuite, prices[selectedSuite])}
-                        className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold active:scale-95 transition-all text-sm shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
-                      >
-                        OK / PAY NOW
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-xs text-slate-400">No balance pending for this suite.</p>
-                      <button
-                        onClick={() => {
-                          setPaymentStatus('idle');
-                          setSelectedSuite(null);
-                        }}
-                        className="w-full py-3 rounded-xl bg-slate-700 text-slate-200 font-medium text-sm"
-                      >
-                        BACK TO SUITES
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+          paymentStatus === 'success' && h('div', { className: 'text-center py-12 bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-6 space-y-4' },
+            h('div', { className: 'text-5xl' }, '✓'),
+            h('h3', { className: 'text-2xl font-bold text-emerald-400' }, 'Payment Successful'),
+            h('p', { className: 'text-sm text-slate-300' }, 'Thank you for your stay at Marinali Rooms!')
+          ),
 
-              {paymentStatus === 'processing' && (
-                <div className="text-center py-12 bg-slate-800/90 border border-slate-700 rounded-3xl p-6 space-y-6">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent"></div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-100">Ready on Reader</h3>
-                    <p className="text-sm text-slate-400 mt-2 px-4">
-                      Please tap, insert, or swipe your card on the Stripe S700 terminal next to you.
-                    </p>
-                  </div>
-                </div>
-              )}
+          paymentStatus === 'error' && h('div', { className: 'text-center py-8 bg-rose-950/40 border border-rose-500/30 rounded-3xl p-6 space-y-6' },
+            h('div', null,
+              h('h3', { className: 'text-xl font-bold text-rose-400' }, 'Transaction Error'),
+              h('p', { className: 'text-xs text-slate-300 mt-2 px-4' }, errorMessage)
+            ),
+            h('button', {
+              onClick: () => setPaymentStatus('confirm'),
+              className: 'py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700'
+            }, 'Try Again')
+          )
+        ),
 
-              {paymentStatus === 'success' && (
-                <div className="text-center py-12 bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-6 space-y-4">
-                  <div className="text-5xl">✓</div>
-                  <h3 className="text-2xl font-bold text-emerald-400">Payment Successful</h3>
-                  <p className="text-sm text-slate-300">
-                    Thank you for your stay at Marinali Rooms!
-                  </p>
-                </div>
-              )}
+        // Admin Mode
+        mode === 'admin' && h('main', { className: 'flex-1 py-6 space-y-6' },
+          h('div', { className: 'border-b border-slate-800 pb-3' },
+            h('h2', { className: 'text-lg font-bold text-amber-400' }, 'Pannello Gestore'),
+            h('p', { className: 'text-xs text-slate-400' }, 'Imposta gli importi da saldare per gli ospiti')
+          ),
+          h('div', { className: 'space-y-4' },
+            Object.keys(prices).map(suite =>
+              h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between' },
+                h('span', { className: 'font-semibold text-slate-200' }, suite),
+                h('div', { className: 'flex items-center gap-2' },
+                  h('span', { className: 'text-slate-400 text-sm' }, '€'),
+                  h('input', {
+                    type: 'number',
+                    step: '0.01',
+                    value: prices[suite],
+                    onChange: (e) => updatePrice(suite, e.target.value),
+                    className: 'w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-right font-mono text-amber-400 font-bold focus:outline-none focus:border-amber-400'
+                  }),
+                  h('button', {
+                    onClick: () => updatePrice(suite, 0),
+                    className: 'text-xs text-slate-500 hover:text-rose-400 px-2 py-1'
+                  }, 'Clear')
+                )
+              )
+            )
+          )
+        ),
 
-              {paymentStatus === 'error' && (
-                <div className="text-center py-8 bg-rose-950/40 border border-rose-500/30 rounded-3xl p-6 space-y-6">
-                  <div>
-                    <h3 className="text-xl font-bold text-rose-400">Transaction Error</h3>
-                    <p className="text-xs text-slate-300 mt-2 px-4">{errorMessage}</p>
-                  </div>
-                  <button
-                    onClick={() => setPaymentStatus('confirm')}
-                    className="py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              )}
-            </main>
-          )}
+        // PIN Modal
+        showPinModal && h('div', { className: 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50' },
+          h('div', { className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4' },
+            h('h3', { className: 'font-semibold text-slate-200' }, 'Inserisci PIN Gestore'),
+            h('input', {
+              type: 'password',
+              maxLength: '4',
+              value: pinInput,
+              onChange: (e) => setPinInput(e.target.value),
+              className: 'w-full text-center text-2xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-2 text-amber-400 focus:outline-none focus:border-amber-400',
+              placeholder: '••••',
+              autoFocus: true
+            }),
+            h('div', { className: 'grid grid-cols-2 gap-2' },
+              h('button', {
+                onClick: () => { setShowPinModal(false); setPinInput(''); },
+                className: 'py-2 bg-slate-700 text-slate-300 rounded-lg text-sm'
+              }, 'Annulla'),
+              h('button', {
+                onClick: handleAdminAccess,
+                className: 'py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-sm'
+              }, 'Entra')
+            )
+          )
+        ),
 
-          {mode === 'admin' && (
-            <main className="flex-1 py-6 space-y-6">
-              <div className="border-b border-slate-800 pb-3">
-                <h2 className="text-lg font-bold text-amber-400">Pannello Gestore</h2>
-                <p className="text-xs text-slate-400">Imposta gli importi da saldare per gli ospiti</p>
-              </div>
-
-              <div className="space-y-4">
-                {Object.keys(prices).map((suite) => (
-                  <div key={suite} className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-slate-200">{suite}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400 text-sm">€</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={prices[suite]}
-                        onChange={(e) => updatePrice(suite, e.target.value)}
-                        className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-right font-mono text-amber-400 font-bold focus:outline-none focus:border-amber-400"
-                      />
-                      <button
-                        onClick={() => updatePrice(suite, 0)}
-                        className="text-xs text-slate-500 hover:text-rose-400 px-2 py-1"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </main>
-          )}
-
-          {showPinModal && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4">
-                <h3 className="font-semibold text-slate-200">Inserisci PIN Gestore</h3>
-                <input
-                  type="password"
-                  maxLength="4"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  className="w-full text-center text-2xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-2 text-amber-400 focus:outline-none focus:border-amber-400"
-                  placeholder="••••"
-                  autoFocus
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => { setShowPinModal(false); setPinInput(''); }}
-                    className="py-2 bg-slate-700 text-slate-300 rounded-lg text-sm"
-                  >
-                    Annulla
-                  </button>
-                  <button
-                    onClick={handleAdminAccess}
-                    className="py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-sm"
-                  >
-                    Entra
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <footer className="text-center text-[10px] text-slate-600 border-t border-slate-800/60 pt-3">
-            Marinali Rooms Checkout System • Powered by Stripe Terminal
-          </footer>
-        </div>
+        // Footer
+        h('footer', { className: 'text-center text-[10px] text-slate-600 border-t border-slate-800/60 pt-3' },
+          'Marinali Rooms Checkout System • Powered by Stripe Terminal'
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
   </script>
 </body>
 </html>
