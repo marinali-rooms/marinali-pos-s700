@@ -7,6 +7,17 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>
+    /* Rimuove le freccette del selettore numerico nei browser webkit e firefox */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased select-none">
   <div id="root"></div>
@@ -15,10 +26,10 @@
     const { useState, useEffect, createElement: h } = React;
 
     const INITIAL_PRICES = {
-      'Suite 1': 0,
-      'Suite 2': 0,
-      'Suite 3': 0,
-      'Suite 4': 0
+      'Suite 1': { price: '', expiresAt: null },
+      'Suite 2': { price: '', expiresAt: null },
+      'Suite 3': { price: '', expiresAt: null },
+      'Suite 4': { price: '', expiresAt: null }
     };
 
     function App() {
@@ -30,12 +41,40 @@
       const [pinInput, setPinInput] = useState('');
       const [showPinModal, setShowPinModal] = useState(false);
 
+      // Carica stato e pulisci scadenze superate
+      const loadAndFilterPrices = () => {
+        const saved = localStorage.getItem('marinali_prices_v2');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            const now = Date.now();
+            let hasChanges = false;
+            
+            Object.keys(parsed).forEach(suite => {
+              if (parsed[suite].expiresAt && now > parsed[suite].expiresAt) {
+                parsed[suite] = { price: '', expiresAt: null };
+                hasChanges = true;
+              }
+            });
+
+            if (hasChanges) {
+              localStorage.setItem('marinali_prices_v2', JSON.stringify(parsed));
+            }
+            setPrices(parsed);
+          } catch (e) {
+            setPrices(INITIAL_PRICES);
+          }
+        }
+      };
+
       useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'admin') setMode('admin');
 
-        const savedPrices = localStorage.getItem('marinali_prices');
-        if (savedPrices) setPrices(JSON.parse(savedPrices));
+        loadAndFilterPrices();
+
+        // Controllo scadenze ogni 30 secondi
+        const interval = setInterval(loadAndFilterPrices, 30000);
 
         const channel = new BroadcastChannel('marinali_pos_channel');
         channel.onmessage = (event) => {
@@ -43,13 +82,30 @@
             setPrices(event.data.prices);
           }
         };
-        return () => channel.close();
+        return () => {
+          clearInterval(interval);
+          channel.close();
+        };
       }, []);
 
-      const updatePrice = (suite, price) => {
-        const updated = { ...prices, [suite]: parseFloat(price) || 0 };
+      const updateSuite = (suite, price, expireHours = null) => {
+        const now = Date.now();
+        let expiresAt = null;
+
+        if (expireHours && expireHours > 0) {
+          expiresAt = now + (expireHours * 60 * 60 * 1000);
+        }
+
+        const updated = {
+          ...prices,
+          [suite]: {
+            price: price === '' ? '' : parseFloat(price) || '',
+            expiresAt: price === '' ? null : (expiresAt || prices[suite]?.expiresAt || null)
+          }
+        };
+
         setPrices(updated);
-        localStorage.setItem('marinali_prices', JSON.stringify(updated));
+        localStorage.setItem('marinali_prices_v2', JSON.stringify(updated));
         
         const channel = new BroadcastChannel('marinali_pos_channel');
         channel.postMessage({ type: 'PRICES_UPDATED', prices: updated });
@@ -57,7 +113,7 @@
       };
 
       const handleAdminAccess = () => {
-        if (pinInput === '1234') {
+        if (pinInput === '1953') {
           setMode('admin');
           setShowPinModal(false);
           setPinInput('');
@@ -94,7 +150,7 @@
 
           if (response.ok && data.success) {
             setPaymentStatus('success');
-            updatePrice(suite, 0);
+            updateSuite(suite, '');
 
             setTimeout(() => {
               setPaymentStatus('idle');
@@ -109,7 +165,22 @@
         }
       };
 
+      const getSuitePrice = (suite) => {
+        const p = prices[suite]?.price;
+        return (p !== '' && p !== null && !isNaN(p)) ? parseFloat(p) : 0;
+      };
+
+      const formatExpiry = (timestamp) => {
+        if (!timestamp) return null;
+        const diffMinutes = Math.round((timestamp - Date.now()) / (1000 * 60));
+        if (diffMinutes <= 0) return 'Expired';
+        if (diffMinutes < 60) return `Expires in ${diffMinutes}m`;
+        const hours = Math.floor(diffMinutes / 60);
+        return `Expires in ${hours}h ${diffMinutes % 60}m`;
+      };
+
       return h('div', { className: 'min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative' },
+        // Header
         h('header', { className: 'flex justify-between items-center border-b border-slate-800 pb-4' },
           h('div', null,
             h('h1', { className: 'text-xl font-bold tracking-wider uppercase text-amber-400' }, 'Marinali Rooms'),
@@ -126,6 +197,7 @@
               }, 'Exit Admin')
         ),
 
+        // Vista Kiosk / Ospite
         mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col justify-center py-6' },
           paymentStatus === 'idle' && h('div', { className: 'space-y-4' },
             h('div', { className: 'text-center mb-6' },
@@ -133,16 +205,20 @@
               h('p', { className: 'text-sm text-slate-400 mt-1' }, 'Please select your suite to complete payment')
             ),
             h('div', { className: 'grid grid-cols-1 gap-3' },
-              Object.keys(prices).map(suite =>
-                h('button', {
+              Object.keys(prices).map(suite => {
+                const priceVal = getSuitePrice(suite);
+                return h('button', {
                   key: suite,
                   onClick: () => { setSelectedSuite(suite); setPaymentStatus('confirm'); },
                   className: 'w-full py-5 px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 active:scale-[0.98] transition-all flex justify-between items-center shadow-lg'
                 },
-                  h('span', { className: 'text-lg font-medium text-slate-100' }, suite),
+                  h('div', { className: 'text-left' },
+                    h('span', { className: 'text-lg font-medium text-slate-100 block' }, suite),
+                    prices[suite]?.expiresAt && h('span', { className: 'text-[10px] text-amber-400/70 block mt-0.5' }, formatExpiry(prices[suite].expiresAt))
+                  ),
                   h('span', { className: 'text-slate-400 text-sm' }, 'Select →')
-                )
-              )
+                );
+              })
             )
           ),
 
@@ -153,16 +229,16 @@
             ),
             h('div', { className: 'py-4 border-y border-slate-700/80' },
               h('p', { className: 'text-xs text-slate-400 uppercase tracking-wider' }, 'Total Amount Due'),
-              h('p', { className: 'text-4xl font-extrabold text-amber-400 mt-1' }, `€ ${prices[selectedSuite]?.toFixed(2)}`)
+              h('p', { className: 'text-4xl font-extrabold text-amber-400 mt-1' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
             ),
-            prices[selectedSuite] > 0
+            getSuitePrice(selectedSuite) > 0
               ? h('div', { className: 'grid grid-cols-2 gap-3 pt-2' },
                   h('button', {
                     onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
                     className: 'w-full py-4 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-medium text-sm'
                   }, 'CANCEL / BACK'),
                   h('button', {
-                    onClick: () => executeStripePayment(selectedSuite, prices[selectedSuite]),
+                    onClick: () => executeStripePayment(selectedSuite, getSuitePrice(selectedSuite)),
                     className: 'w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20'
                   }, 'OK / PAY NOW')
                 )
@@ -205,34 +281,60 @@
           )
         ),
 
+        // Vista Pannello Gestore (Admin)
         mode === 'admin' && h('main', { className: 'flex-1 py-6 space-y-6' },
           h('div', { className: 'border-b border-slate-800 pb-3' },
             h('h2', { className: 'text-lg font-bold text-amber-400' }, 'Pannello Gestore'),
-            h('p', { className: 'text-xs text-slate-400' }, 'Imposta gli importi da saldare per gli ospiti')
+            h('p', { className: 'text-xs text-slate-400' }, 'Imposta importo e scadenza per gli ospiti in arrivo')
           ),
-          h('div', { className: 'space-y-4' },
+          h('div', { className: 'space-y-5' },
             Object.keys(prices).map(suite =>
-              h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between' },
-                h('span', { className: 'font-semibold text-slate-200' }, suite),
-                h('div', { className: 'flex items-center gap-2' },
-                  h('span', { className: 'text-slate-400 text-sm' }, '€'),
-                  h('input', {
-                    type: 'number',
-                    step: '0.01',
-                    value: prices[suite],
-                    onChange: (e) => updatePrice(suite, e.target.value),
-                    className: 'w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-right font-mono text-amber-400 font-bold focus:outline-none focus:border-amber-400'
-                  }),
-                  h('button', {
-                    onClick: () => updatePrice(suite, 0),
-                    className: 'text-xs text-slate-500 hover:text-rose-400 px-2 py-1'
-                  }, 'Clear')
+              h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 space-y-3' },
+                h('div', { className: 'flex items-center justify-between' },
+                  h('span', { className: 'font-semibold text-slate-100 text-base' }, suite),
+                  h('div', { className: 'flex items-center gap-2' },
+                    h('span', { className: 'text-slate-400 text-sm font-bold' }, '€'),
+                    h('input', {
+                      type: 'number',
+                      inputMode: 'decimal',
+                      placeholder: '0.00',
+                      value: prices[suite]?.price ?? '',
+                      onChange: (e) => updateSuite(suite, e.target.value),
+                      className: 'w-28 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-right font-mono text-amber-400 font-bold text-lg focus:outline-none focus:border-amber-400 placeholder-slate-600'
+                    }),
+                    h('button', {
+                      onClick: () => updateSuite(suite, ''),
+                      className: 'text-xs bg-slate-700/50 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 px-2.5 py-2 rounded-xl transition-colors font-medium'
+                    }, 'Clear')
+                  )
+                ),
+
+                // Sezione Scadenza (Expire Date)
+                prices[suite]?.price !== '' && h('div', { className: 'flex items-center justify-between border-t border-slate-700/40 pt-2.5 text-xs' },
+                  h('span', { className: 'text-slate-400' }, 
+                    prices[suite]?.expiresAt ? formatExpiry(prices[suite].expiresAt) : 'No expiration set'
+                  ),
+                  h('div', { className: 'flex gap-1.5' },
+                    [
+                      { label: '2h', h: 2 },
+                      { label: '6h', h: 6 },
+                      { label: '12h', h: 12 },
+                      { label: '24h', h: 24 }
+                    ].map(opt =>
+                      h('button', {
+                        key: opt.label,
+                        onClick: () => updateSuite(suite, prices[suite].price, opt.h),
+                        className: 'px-2 py-1 bg-slate-700/60 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400 rounded-lg text-[11px] font-medium transition-colors border border-slate-600/40'
+                      }, `+${opt.label}`)
+                    )
+                  )
                 )
               )
             )
           )
         ),
 
+        // PIN Modal
         showPinModal && h('div', { className: 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50' },
           h('div', { className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4' },
             h('h3', { className: 'font-semibold text-slate-200' }, 'Inserisci PIN Gestore'),
