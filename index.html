@@ -8,17 +8,33 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <style>
-    input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { 
-      -webkit-appearance: none; 
-      margin: 0; 
+    html, body, #root { height: 100%; margin: 0; }
+    body { overflow: hidden; }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
     input[type=number] {
       -moz-appearance: textfield;
     }
+
+    /* Altezza reale dello schermo (gestisce anche barre del browser) */
+    .app-screen {
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    /* Feedback touch più evidente sui kiosk */
+    .kiosk-btn:active { transform: scale(0.98); }
+    .kiosk-btn { -webkit-tap-highlight-color: transparent; }
+
+    /* Admin: consente scroll interno se serve */
+    .admin-scroll { overflow-y: auto; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased select-none">
+<body class="bg-slate-900 text-slate-100 font-sans antialiased select-none">
   <div id="root"></div>
 
   <script>
@@ -47,7 +63,7 @@
             const parsed = JSON.parse(saved);
             const now = Date.now();
             let hasChanges = false;
-            
+
             Object.keys(parsed).forEach(suite => {
               if (parsed[suite].expiresAt && now > parsed[suite].expiresAt) {
                 parsed[suite] = { price: '', expiresAt: null, days: 1 };
@@ -87,7 +103,7 @@
       const updateSuite = (suite, priceVal, daysVal = null) => {
         const now = Date.now();
         const selectedDays = daysVal !== null ? daysVal : (prices[suite]?.days || 1);
-        
+
         let expiresAt = null;
         if (priceVal !== '' && priceVal !== null) {
           expiresAt = now + (selectedDays * 24 * 60 * 60 * 1000);
@@ -104,7 +120,7 @@
 
         setPrices(updated);
         localStorage.setItem('marinali_prices_v3', JSON.stringify(updated));
-        
+
         const channel = new BroadcastChannel('marinali_pos_channel');
         channel.postMessage({ type: 'PRICES_UPDATED', prices: updated });
         channel.close();
@@ -172,7 +188,7 @@
         if (!timestamp) return null;
         const diffMs = timestamp - Date.now();
         if (diffMs <= 0) return 'Expired';
-        
+
         const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
         const days = Math.floor(totalHours / 24);
         const hours = totalHours % 24;
@@ -181,141 +197,149 @@
         return `Scade tra ${hours}h`;
       };
 
-      return h('div', { className: 'min-h-screen flex flex-col justify-between p-6 max-w-md mx-auto relative' },
-        // Header
-        h('header', { className: 'flex justify-between items-center border-b border-slate-800 pb-4' },
+      return h('div', { className: 'app-screen flex flex-col p-4 sm:p-6 max-w-2xl mx-auto w-full' },
+
+        /* ---------- HEADER ---------- */
+        h('header', { className: 'flex justify-between items-center border-b border-slate-800 pb-3 flex-shrink-0' },
           h('div', null,
-            h('h1', { className: 'text-xl font-bold tracking-wider uppercase text-amber-400' }, 'Marinali Rooms'),
-            h('p', { className: 'text-xs text-slate-400' }, 'Historic Center • Bassano del Grappa')
+            h('h1', { className: 'text-2xl font-bold tracking-wider uppercase text-amber-400' }, 'Marinali Rooms'),
+            h('p', { className: 'text-sm text-slate-400' }, 'Historic Center • Bassano del Grappa')
           ),
           mode === 'kiosk'
             ? h('button', {
                 onClick: () => setShowPinModal(true),
-                className: 'text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700'
+                className: 'text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg border border-slate-700 kiosk-btn'
               }, 'Gestore')
             : h('button', {
                 onClick: () => setMode('kiosk'),
-                className: 'text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-500/30 font-medium'
+                className: 'text-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-4 py-2 rounded-lg border border-amber-500/30 font-medium kiosk-btn'
               }, 'Exit Admin')
         ),
 
-        // Vista Kiosk / Ospite
-        mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col justify-center py-6' },
-          paymentStatus === 'idle' && h('div', { className: 'space-y-4' },
-            h('div', { className: 'text-center mb-6' },
-              h('h2', { className: 'text-2xl font-semibold text-slate-100' }, 'Welcome'),
-              h('p', { className: 'text-sm text-slate-400 mt-1' }, 'Please select your suite to complete payment')
+        /* ---------- KIOSK VIEW ---------- */
+        mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col py-4 min-h-0' },
+
+          /* --- IDLE: selezione suite (bottoni che riempiono lo schermo) --- */
+          paymentStatus === 'idle' && h('div', { className: 'flex-1 flex flex-col min-h-0' },
+            h('div', { className: 'text-center mb-4 flex-shrink-0' },
+              h('h2', { className: 'text-3xl font-bold text-slate-100' }, 'Welcome'),
+              h('p', { className: 'text-base text-slate-400 mt-1' }, 'Please select your suite to complete payment')
             ),
-            h('div', { className: 'grid grid-cols-1 gap-3' },
+            h('div', { className: 'flex-1 flex flex-col gap-3 min-h-0' },
               Object.keys(prices).map(suite =>
                 h('button', {
                   key: suite,
                   onClick: () => { setSelectedSuite(suite); setPaymentStatus('confirm'); },
-                  className: 'w-full py-5 px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 active:scale-[0.98] transition-all flex justify-between items-center shadow-lg'
+                  className: 'kiosk-btn flex-1 w-full px-6 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 transition-all flex justify-between items-center shadow-lg min-h-[88px]'
                 },
                   h('div', { className: 'text-left' },
-                    h('span', { className: 'text-lg font-medium text-slate-100 block' }, suite),
-                    prices[suite]?.expiresAt && h('span', { className: 'text-[10px] text-amber-400/70 block mt-0.5' }, formatExpiry(prices[suite].expiresAt))
+                    h('span', { className: 'text-2xl sm:text-3xl font-semibold text-slate-100 block' }, suite),
+                    prices[suite]?.expiresAt && h('span', { className: 'text-sm text-amber-400/70 block mt-1' }, formatExpiry(prices[suite].expiresAt))
                   ),
-                  h('span', { className: 'text-slate-400 text-sm' }, 'Select →')
+                  h('span', { className: 'text-4xl text-slate-400' }, '›')
                 )
               )
             )
           ),
 
-          paymentStatus === 'confirm' && h('div', { className: 'bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl' },
-            h('div', null,
-              h('span', { className: 'text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20' }, 'Selected Suite'),
-              h('h2', { className: 'text-3xl font-bold text-slate-100 mt-3' }, selectedSuite)
-            ),
-            h('div', { className: 'py-4 border-y border-slate-700/80' },
-              h('p', { className: 'text-xs text-slate-400 uppercase tracking-wider' }, 'Total Amount Due'),
-              h('p', { className: 'text-4xl font-extrabold text-amber-400 mt-1' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
-            ),
-            getSuitePrice(selectedSuite) > 0
-              ? h('div', { className: 'grid grid-cols-2 gap-3 pt-2' },
-                  h('button', {
-                    onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
-                    className: 'w-full py-4 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-medium text-sm'
-                  }, 'CANCEL / BACK'),
-                  h('button', {
-                    onClick: () => executeStripePayment(selectedSuite, getSuitePrice(selectedSuite)),
-                    className: 'w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20'
-                  }, 'OK / PAY NOW')
-                )
-              : h('div', { className: 'space-y-4' },
-                  h('p', { className: 'text-xs text-slate-400' }, 'No balance pending for this suite.'),
-                  h('button', {
-                    onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
-                    className: 'w-full py-3 rounded-xl bg-slate-700 text-slate-200 font-medium text-sm'
-                  }, 'BACK TO SUITES')
-                )
+          /* --- CONFIRM: schermata pagamento --- */
+          paymentStatus === 'confirm' && h('div', { className: 'flex-1 flex items-center justify-center' },
+            h('div', { className: 'w-full bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl' },
+              h('div', null,
+                h('span', { className: 'text-sm font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/20' }, 'Selected Suite'),
+                h('h2', { className: 'text-4xl font-bold text-slate-100 mt-4' }, selectedSuite)
+              ),
+              h('div', { className: 'py-6 border-y border-slate-700/80' },
+                h('p', { className: 'text-sm text-slate-400 uppercase tracking-wider' }, 'Total Amount Due'),
+                h('p', { className: 'text-6xl font-extrabold text-amber-400 mt-2' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
+              ),
+              getSuitePrice(selectedSuite) > 0
+                ? h('div', { className: 'grid grid-cols-2 gap-4 pt-2' },
+                    h('button', {
+                      onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
+                      className: 'kiosk-btn w-full py-6 rounded-2xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-semibold text-lg'
+                    }, 'CANCEL / BACK'),
+                    h('button', {
+                      onClick: () => executeStripePayment(selectedSuite, getSuitePrice(selectedSuite)),
+                      className: 'kiosk-btn w-full py-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-lg shadow-lg shadow-amber-500/20'
+                    }, 'OK / PAY NOW')
+                  )
+                : h('div', { className: 'space-y-4' },
+                    h('p', { className: 'text-base text-slate-400' }, 'No balance pending for this suite.'),
+                    h('button', {
+                      onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
+                      className: 'kiosk-btn w-full py-5 rounded-2xl bg-slate-700 text-slate-200 font-semibold text-lg'
+                    }, 'BACK TO SUITES')
+                  )
+            )
           ),
 
-          paymentStatus === 'processing' && h('div', { className: 'text-center py-12 bg-slate-800/90 border border-slate-700 rounded-3xl p-6 space-y-6' },
-            h('div', { className: 'inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent' }),
+          /* --- PROCESSING --- */
+          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/90 border border-slate-700 rounded-3xl p-8 space-y-8' },
+            h('div', { className: 'inline-block animate-spin rounded-full h-20 w-20 border-4 border-amber-400 border-t-transparent' }),
             h('div', null,
-              h('h3', { className: 'text-xl font-bold text-slate-100' }, 'Ready on Reader'),
-              h('p', { className: 'text-sm text-slate-400 mt-2 px-4' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal.')
+              h('h3', { className: 'text-3xl font-bold text-slate-100' }, 'Ready on Reader'),
+              h('p', { className: 'text-lg text-slate-400 mt-3 px-4' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal.')
             ),
             h('button', {
               onClick: cancelReaderAction,
-              className: 'mt-4 text-xs text-rose-400 hover:text-rose-300 underline'
+              className: 'text-base text-rose-400 hover:text-rose-300 underline'
             }, 'Cancel Transaction')
           ),
 
-          paymentStatus === 'success' && h('div', { className: 'text-center py-12 bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-6 space-y-4' },
-            h('div', { className: 'text-5xl' }, '✓'),
-            h('h3', { className: 'text-2xl font-bold text-emerald-400' }, 'Payment Successful'),
-            h('p', { className: 'text-sm text-slate-300' }, 'Thank you for your stay at Marinali Rooms!')
+          /* --- SUCCESS --- */
+          paymentStatus === 'success' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-8 space-y-6' },
+            h('div', { className: 'text-7xl' }, '✓'),
+            h('h3', { className: 'text-4xl font-bold text-emerald-400' }, 'Payment Successful'),
+            h('p', { className: 'text-lg text-slate-300' }, 'Thank you for your stay at Marinali Rooms!')
           ),
 
-          paymentStatus === 'error' && h('div', { className: 'text-center py-8 bg-rose-950/40 border border-rose-500/30 rounded-3xl p-6 space-y-6' },
+          /* --- ERROR --- */
+          paymentStatus === 'error' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-rose-950/40 border border-rose-500/30 rounded-3xl p-8 space-y-8' },
             h('div', null,
-              h('h3', { className: 'text-xl font-bold text-rose-400' }, 'Transaction Error'),
-              h('p', { className: 'text-xs text-slate-300 mt-2 px-4' }, errorMessage)
+              h('h3', { className: 'text-3xl font-bold text-rose-400' }, 'Transaction Error'),
+              h('p', { className: 'text-base text-slate-300 mt-3 px-4' }, errorMessage)
             ),
             h('button', {
               onClick: cancelReaderAction,
-              className: 'py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700'
+              className: 'kiosk-btn py-5 px-8 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl text-base font-semibold border border-slate-700'
             }, 'Back to Home')
           )
         ),
 
-        // Vista Pannello Gestore (Admin)
-        mode === 'admin' && h('main', { className: 'flex-1 py-6 space-y-6' },
+        /* ---------- ADMIN VIEW ---------- */
+        mode === 'admin' && h('main', { className: 'flex-1 py-4 space-y-4 admin-scroll min-h-0' },
           h('div', { className: 'border-b border-slate-800 pb-3' },
-            h('h2', { className: 'text-lg font-bold text-amber-400' }, 'Pannello Gestore'),
-            h('p', { className: 'text-xs text-slate-400' }, 'Imposta importo e giorni di validità (1-9 giorni)')
+            h('h2', { className: 'text-xl font-bold text-amber-400' }, 'Pannello Gestore'),
+            h('p', { className: 'text-sm text-slate-400' }, 'Imposta importo e giorni di validità (1-9 giorni)')
           ),
-          h('div', { className: 'space-y-5' },
+          h('div', { className: 'space-y-4' },
             Object.keys(prices).map(suite => {
               const currentDays = prices[suite]?.days || 1;
               const hasPrice = prices[suite]?.price !== '' && prices[suite]?.price !== null;
 
               return h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 space-y-3' },
-                h('div', { className: 'flex items-center justify-between' },
-                  h('span', { className: 'font-semibold text-slate-100 text-base' }, suite),
+                h('div', { className: 'flex items-center justify-between gap-2' },
+                  h('span', { className: 'font-semibold text-slate-100 text-lg' }, suite),
                   h('div', { className: 'flex items-center gap-2' },
-                    h('span', { className: 'text-slate-400 text-sm font-bold' }, '€'),
+                    h('span', { className: 'text-slate-400 text-base font-bold' }, '€'),
                     h('input', {
                       type: 'number',
                       inputMode: 'decimal',
                       placeholder: '0.00',
                       value: prices[suite]?.price ?? '',
                       onChange: (e) => updateSuite(suite, e.target.value),
-                      className: 'w-28 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-right font-mono text-amber-400 font-bold text-lg focus:outline-none focus:border-amber-400 placeholder-slate-600'
+                      className: 'w-32 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-right font-mono text-amber-400 font-bold text-lg focus:outline-none focus:border-amber-400 placeholder-slate-600'
                     }),
                     h('button', {
                       onClick: () => updateSuite(suite, ''),
-                      className: 'text-xs bg-slate-700/50 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 px-2.5 py-2 rounded-xl transition-colors font-medium'
+                      className: 'kiosk-btn text-sm bg-slate-700/50 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 px-3 py-2.5 rounded-xl transition-colors font-medium'
                     }, 'Clear')
                   )
                 ),
 
-                // Selettore Giorni 1-9 (visibile quando c'è un importo)
-                hasPrice && h('div', { className: 'space-y-2 border-t border-slate-700/40 pt-2.5' },
-                  h('div', { className: 'flex justify-between items-center text-xs' },
+                hasPrice && h('div', { className: 'space-y-2 border-t border-slate-700/40 pt-3' },
+                  h('div', { className: 'flex justify-between items-center text-sm' },
                     h('span', { className: 'text-slate-400' }, 'Validità prezzo:'),
                     h('span', { className: 'text-amber-400 font-medium' }, formatExpiry(prices[suite].expiresAt))
                   ),
@@ -324,7 +348,7 @@
                       h('button', {
                         key: d,
                         onClick: () => updateSuite(suite, prices[suite].price, d),
-                        className: `py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                        className: `kiosk-btn py-2.5 rounded-lg text-sm font-bold transition-all border ${
                           currentDays === d
                             ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md scale-105'
                             : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-700'
@@ -338,33 +362,34 @@
           )
         ),
 
-        // PIN Modal
+        /* ---------- PIN MODAL ---------- */
         showPinModal && h('div', { className: 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50' },
-          h('div', { className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-xs text-center space-y-4' },
-            h('h3', { className: 'font-semibold text-slate-200' }, 'Inserisci PIN Gestore'),
+          h('div', { className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center space-y-5' },
+            h('h3', { className: 'font-semibold text-slate-200 text-lg' }, 'Inserisci PIN Gestore'),
             h('input', {
               type: 'password',
               maxLength: '4',
               value: pinInput,
               onChange: (e) => setPinInput(e.target.value),
-              className: 'w-full text-center text-2xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-2 text-amber-400 focus:outline-none focus:border-amber-400',
+              className: 'w-full text-center text-3xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-3 text-amber-400 focus:outline-none focus:border-amber-400',
               placeholder: '••••',
               autoFocus: true
             }),
-            h('div', { className: 'grid grid-cols-2 gap-2' },
+            h('div', { className: 'grid grid-cols-2 gap-3' },
               h('button', {
                 onClick: () => { setShowPinModal(false); setPinInput(''); },
-                className: 'py-2 bg-slate-700 text-slate-300 rounded-lg text-sm'
+                className: 'kiosk-btn py-3 bg-slate-700 text-slate-300 rounded-xl text-base font-medium'
               }, 'Annulla'),
               h('button', {
                 onClick: handleAdminAccess,
-                className: 'py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-sm'
+                className: 'kiosk-btn py-3 bg-amber-500 text-slate-950 font-bold rounded-xl text-base'
               }, 'Entra')
             )
           )
         ),
 
-        h('footer', { className: 'text-center text-[10px] text-slate-600 border-t border-slate-800/60 pt-3' },
+        /* ---------- FOOTER ---------- */
+        h('footer', { className: 'text-center text-xs text-slate-600 border-t border-slate-800/60 pt-3 flex-shrink-0' },
           'Marinali Rooms Checkout System • Powered by Stripe Terminal'
         )
       );
