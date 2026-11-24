@@ -11,6 +11,13 @@
     html, body, #root { height: 100%; margin: 0; }
     body { overflow: hidden; }
 
+    /* FIX: il select-none sul body impediva il focus/keyboard sugli input su Android kiosk */
+    input,
+    textarea {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button {
       -webkit-appearance: none;
@@ -20,17 +27,14 @@
       -moz-appearance: textfield;
     }
 
-    /* Altezza reale dello schermo (gestisce anche barre del browser) */
     .app-screen {
       height: 100vh;
       height: 100dvh;
     }
 
-    /* Feedback touch più evidente sui kiosk */
     .kiosk-btn:active { transform: scale(0.98); }
     .kiosk-btn { -webkit-tap-highlight-color: transparent; }
 
-    /* Admin: consente scroll interno se serve */
     .admin-scroll { overflow-y: auto; }
   </style>
 </head>
@@ -38,7 +42,7 @@
   <div id="root"></div>
 
   <script>
-    const { useState, useEffect, createElement: h } = React;
+    const { useState, useEffect, useRef, createElement: h } = React;
 
     const INITIAL_PRICES = {
       'Suite 1': { price: '', expiresAt: null, days: 1 },
@@ -55,6 +59,19 @@
       const [errorMessage, setErrorMessage] = useState('');
       const [pinInput, setPinInput] = useState('');
       const [showPinModal, setShowPinModal] = useState(false);
+
+      // FIX: ref per forzare il focus sull'input PIN
+      const pinInputRef = useRef(null);
+
+      // FIX: quando il modal PIN si apre, forza il focus (fallback ad autoFocus)
+      useEffect(() => {
+        if (showPinModal) {
+          const t = setTimeout(() => {
+            pinInputRef.current?.focus();
+          }, 80);
+          return () => clearTimeout(t);
+        }
+      }, [showPinModal]);
 
       const loadAndFilterPrices = () => {
         const saved = localStorage.getItem('marinali_prices_v3');
@@ -134,6 +151,8 @@
         } else {
           alert('Incorrect PIN');
           setPinInput('');
+          // Riapri il focus per nuovo tentativo
+          setTimeout(() => pinInputRef.current?.focus(), 50);
         }
       };
 
@@ -219,7 +238,6 @@
         /* ---------- KIOSK VIEW ---------- */
         mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col py-4 min-h-0' },
 
-          /* --- IDLE: selezione suite (bottoni che riempiono lo schermo) --- */
           paymentStatus === 'idle' && h('div', { className: 'flex-1 flex flex-col min-h-0' },
             h('div', { className: 'text-center mb-4 flex-shrink-0' },
               h('h2', { className: 'text-3xl font-bold text-slate-100' }, 'Welcome'),
@@ -242,7 +260,6 @@
             )
           ),
 
-          /* --- CONFIRM: schermata pagamento --- */
           paymentStatus === 'confirm' && h('div', { className: 'flex-1 flex items-center justify-center' },
             h('div', { className: 'w-full bg-slate-800/90 border border-slate-700 rounded-3xl p-6 text-center space-y-6 shadow-2xl' },
               h('div', null,
@@ -274,7 +291,6 @@
             )
           ),
 
-          /* --- PROCESSING --- */
           paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/90 border border-slate-700 rounded-3xl p-8 space-y-8' },
             h('div', { className: 'inline-block animate-spin rounded-full h-20 w-20 border-4 border-amber-400 border-t-transparent' }),
             h('div', null,
@@ -287,14 +303,12 @@
             }, 'Cancel Transaction')
           ),
 
-          /* --- SUCCESS --- */
           paymentStatus === 'success' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-emerald-950/40 border border-emerald-500/30 rounded-3xl p-8 space-y-6' },
             h('div', { className: 'text-7xl' }, '✓'),
             h('h3', { className: 'text-4xl font-bold text-emerald-400' }, 'Payment Successful'),
             h('p', { className: 'text-lg text-slate-300' }, 'Thank you for your stay at Marinali Rooms!')
           ),
 
-          /* --- ERROR --- */
           paymentStatus === 'error' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-rose-950/40 border border-rose-500/30 rounded-3xl p-8 space-y-8' },
             h('div', null,
               h('h3', { className: 'text-3xl font-bold text-rose-400' }, 'Transaction Error'),
@@ -364,16 +378,28 @@
 
         /* ---------- PIN MODAL ---------- */
         showPinModal && h('div', { className: 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50' },
-          h('div', { className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center space-y-5' },
+          h('div', {
+            // FIX: click ovunque nel riquadro riporta il focus all'input
+            onClick: () => pinInputRef.current?.focus(),
+            className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center space-y-5'
+          },
             h('h3', { className: 'font-semibold text-slate-200 text-lg' }, 'Inserisci PIN Gestore'),
             h('input', {
+              // FIX: ref + focus programmatico
+              ref: pinInputRef,
               type: 'password',
+              inputMode: 'numeric',
+              pattern: '[0-9]*',
               maxLength: '4',
               value: pinInput,
-              onChange: (e) => setPinInput(e.target.value),
+              onChange: (e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)),
               className: 'w-full text-center text-3xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-3 text-amber-400 focus:outline-none focus:border-amber-400',
               placeholder: '••••',
-              autoFocus: true
+              autoFocus: true,
+              autoComplete: 'off',
+              autoCorrect: 'off',
+              autoCapitalize: 'off',
+              spellCheck: false
             }),
             h('div', { className: 'grid grid-cols-2 gap-3' },
               h('button', {
