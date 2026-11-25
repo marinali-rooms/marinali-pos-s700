@@ -29,11 +29,11 @@
 
     /* Animazione per la freccia che indica il POS */
     @keyframes slide-right {
-      0%, 100% { transform: translateX(0); }
-      50% { transform: translateX(30px); }
+      0%, 100% { transform: translateX(0); opacity: 0.7; }
+      50% { transform: translateX(25px); opacity: 1; }
     }
     .animate-arrow {
-      animation: slide-right 1s ease-in-out infinite;
+      animation: slide-right 1.2s ease-in-out infinite;
     }
   </style>
 </head>
@@ -280,17 +280,17 @@
 
           /* --- CONFIRM --- */
           paymentStatus === 'confirm' && h('div', { className: 'flex-1 flex items-center justify-center' },
-            h('div', { className: 'w-full max-w-lg bg-slate-800/80 backdrop-blur-md border border-slate-700/60 rounded-3xl p-8 text-center space-y-8 shadow-2xl' },
+            h('div', { className: 'w-full max-w-lg bg-slate-800/80 backdrop-blur-md border border-slate-700/60 rounded-3xl p-8 text-center space-y-6 shadow-2xl' },
               h('div', null,
                 h('span', { className: 'text-sm font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/20' }, 'Selected Suite'),
                 h('h2', { className: 'text-4xl font-light text-slate-100 mt-5' }, selectedSuite)
               ),
-              h('div', { className: 'py-8 border-y border-slate-700/60' },
+              h('div', { className: 'py-6 border-y border-slate-700/60' },
                 h('p', { className: 'text-sm text-slate-400 uppercase tracking-widest' }, 'Total Amount'),
                 h('p', { className: 'text-6xl font-extrabold text-amber-400 mt-2' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
               ),
               getSuitePrice(selectedSuite) > 0
-                ? h('div', { className: 'space-y-5' },
+                ? h('div', { className: 'space-y-4' },
                     h('div', { className: 'grid grid-cols-2 gap-4' },
                       h('button', {
                         onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
@@ -301,9 +301,9 @@
                         className: 'kiosk-btn w-full py-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-lg shadow-lg shadow-amber-500/20 transition-colors'
                       }, 'PAY NOW')
                     ),
-                    // Suggerimento per il POS
-                    h('p', { className: 'text-sm text-slate-400 font-medium tracking-wide pt-2 animate-pulse' }, 
-                      '👇 Il lettore carte si trova sulla tua destra 👉'
+                    // Freccia destra che indica il POS
+                    h('div', { className: 'flex justify-end pt-2 pr-2' },
+                      h('div', { className: 'text-6xl text-amber-500 animate-arrow' }, '➡')
                     )
                   )
                 : h('div', { className: 'space-y-5' },
@@ -317,25 +317,19 @@
           ),
 
           /* --- PROCESSING --- */
-          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-10 space-y-6 max-w-lg mx-auto w-full shadow-2xl' },
+          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-10 space-y-8 max-w-lg mx-auto w-full shadow-2xl overflow-hidden' },
             
-            // Animazione della freccia verso il POS
-            h('div', { className: 'flex items-center justify-center space-x-4 text-amber-400 mb-2' },
-              h('span', { className: 'text-6xl' }, '💳'),
-              h('span', { className: 'text-7xl font-light animate-arrow' }, '→')
+            // FREECCIA GIGANTE E ANIMATA
+            h('div', { className: 'flex items-center justify-center w-full' },
+              h('div', { className: 'text-[10rem] leading-none text-amber-400 animate-arrow' }, '➡')
             ),
 
-            h('div', null,
-              h('h3', { className: 'text-4xl font-bold text-slate-100 mb-4' }, 'Usa il POS'),
-              h('p', { className: 'text-2xl text-amber-400 font-medium mb-2' }, 'alla tua destra'),
-              h('p', { className: 'text-lg text-slate-400 mt-4 px-4 leading-relaxed' }, 'Appoggia o inserisci la carta sul lettore S700.')
-            ),
-            
-            h('div', { className: 'inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-amber-400 mt-4' }),
+            // Spinner di caricamento spostato in basso
+            h('div', { className: 'inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-amber-400' }),
             
             h('button', {
               onClick: cancelReaderAction,
-              className: 'text-sm text-slate-500 hover:text-rose-400 underline transition-colors pt-6'
+              className: 'text-sm text-slate-500 hover:text-rose-400 underline transition-colors pt-4'
             }, 'Annulla transazione')
           ),
 
