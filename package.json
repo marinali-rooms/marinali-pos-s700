@@ -1,12 +1,5 @@
 {
-  "name": "marinali-pos-s700",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
   "dependencies": {
-    "express": "^4.19.2",
-    "stripe": "^15.10.0"
+    "@upstash/redis": "^1.34.3"
   }
 }
