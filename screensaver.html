@@ -15,33 +15,11 @@
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    /* Sfondo con effetto slideshow (Crossfade) */
+    /* Sfondo */
     .bg-container {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
       z-index: 1;
-    }
-    
-    .bg-image {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background-size: cover;
-      background-position: center;
-      opacity: 0;
-      animation: crossfade 24s infinite;
-    }
-
-    /* Sostituisci gli URL qui sotto con le tue foto */
-    .bg-image:nth-child(1) { background-image: url('https://images.unsplash.com/photo-1543429257-3eb0b65d9c58?q=80&w=1080&auto=format&fit=crop'); animation-delay: 0s; }
-    .bg-image:nth-child(2) { background-image: url('https://images.unsplash.com/photo-1516483638261-f4085ee6b6f4?q=80&w=1080&auto=format&fit=crop'); animation-delay: 8s; }
-    .bg-image:nth-child(3) { background-image: url('https://images.unsplash.com/photo-1498307833015-e7b400441eb8?q=80&w=1080&auto=format&fit=crop'); animation-delay: 16s; }
-
-    @keyframes crossfade {
-      0% { opacity: 0; }
-      10% { opacity: 1; }
-      33% { opacity: 1; }
-      43% { opacity: 0; }
-      100% { opacity: 0; }
     }
 
     /* Overlay scuro per contrasto */
@@ -52,7 +30,7 @@
       z-index: 2;
     }
 
-    /* Contenitore del testo con animazione anti burn-in (fluttuazione lentissima) */
+    /* Contenitore del testo con animazione anti burn-in */
     .content {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -65,7 +43,6 @@
       color: white;
       padding: 20px;
       box-sizing: border-box;
-      /* Animazione che sposta il blocco di testo in un'orbita dolce */
       animation: drift 30s ease-in-out infinite alternate;
     }
 
@@ -77,7 +54,6 @@
       100% { transform: translate(0, 0); }
     }
 
-    /* Icona mano che pulsa */
     .tap-icon {
       font-size: 4rem;
       margin-bottom: 10px;
@@ -90,18 +66,16 @@
       100% { transform: scale(1); opacity: 0.8; }
     }
 
-    /* Titolo principale */
     .title {
       font-size: 3.5rem;
       font-weight: 900;
-      color: #fbbf24; /* Ambra */
+      color: #fbbf24;
       margin: 0;
       text-transform: uppercase;
       letter-spacing: 2px;
       text-shadow: 0 4px 20px rgba(0,0,0,0.9);
     }
 
-    /* Contenitore delle traduzioni */
     .languages {
       margin-top: 40px;
       display: flex;
@@ -109,9 +83,8 @@
       gap: 12px;
     }
 
-    /* Stile unificato per TUTTE le lingue (stessa grandezza e colore) */
     .lang-text {
-      font-size: 1.5rem; /* Più piccolo del titolo */
+      font-size: 1.5rem;
       font-weight: 500;
       margin: 0;
       color: #cbd5e1;
@@ -121,28 +94,77 @@
 </head>
 <body>
 
-  <!-- Sfondo animato -->
-  <div class="bg-container">
-    <div class="bg-image"></div>
-    <div class="bg-image"></div>
-    <div class="bg-image"></div>
-  </div>
+  <!-- Qui lo script inserirà le immagini in automatico -->
+  <div class="bg-container" id="bg-container"></div>
 
-  <!-- Sfumatura scura -->
   <div class="overlay"></div>
 
-  <!-- Testi con animazione anti burn-in -->
   <div class="content">
     <div class="tap-icon">👆</div>
     <h1 class="title">Tap to start</h1>
-    
     <div class="languages">
-      <!-- Tutte le lingue hanno la stessa identica classe CSS -->
       <p class="lang-text">Tocca per iniziare</p>
       <p class="lang-text">Tap to start</p>
       <p class="lang-text">Tippen Sie zum Starten</p>
     </div>
   </div>
 
+  <script>
+    async function initSlideshow() {
+      const container = document.getElementById('bg-container');
+      
+      try {
+        // Chiede la lista delle foto alla nostra API
+        const res = await fetch('/api/images');
+        const images = await res.json();
+
+        if (!images || images.length === 0) {
+          console.log("Nessuna immagine trovata, uso sfondo scuro.");
+          return; // Se la cartella è vuota, resta lo sfondo scuro
+        }
+
+        const totalDuration = 24; // Durata totale del ciclo in secondi (es. 24s)
+        // Calcola la percentuale di tempo per ogni immagine (es. se ci sono 4 foto, ognuna sta 25%)
+        const step = 100 / images.length; 
+        const fadeTime = Math.min(step * 0.2, 10); // Calcola una dissolvenza morbida
+
+        // Genera l'animazione CSS dinamicamente in base a quante foto ci sono
+        const style = document.createElement('style');
+        style.innerHTML = `
+          @keyframes crossfade {
+            0% { opacity: 0; }
+            ${fadeTime}% { opacity: 1; }
+            ${step - fadeTime}% { opacity: 1; }
+            ${step}% { opacity: 0; }
+            100% { opacity: 0; }
+          }
+          .bg-image {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            animation: crossfade ${totalDuration}s infinite;
+          }
+        `;
+        document.head.appendChild(style);
+
+        // Crea un div per ogni foto trovata nella cartella
+        images.forEach((img, index) => {
+          const div = document.createElement('div');
+          div.className = 'bg-image';
+          div.style.backgroundImage = `url('/images/${img}')`;
+          // Sfalsa la partenza dell'animazione per ogni immagine
+          div.style.animationDelay = `${index * (totalDuration / images.length)}s`;
+          container.appendChild(div);
+        });
+
+      } catch (e) {
+        console.error("Errore nel caricamento dello slideshow:", e);
+      }
+    }
+
+    initSlideshow();
+  </script>
 </body>
 </html>
