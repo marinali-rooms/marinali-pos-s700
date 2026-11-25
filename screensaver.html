@@ -155,16 +155,15 @@
       `;
       document.head.appendChild(style);
 
-      // Crea un livello per ogni immagine
-      myImages.forEach((img, index) => {
-        const div = document.createElement('div');
-        div.className = 'bg-image';
-        // Cerca la foto nella cartella /images/
-        div.style.backgroundImage = `url('/images/${img}')`;
-        div.style.animationDelay = `${index * (totalDuration / myImages.length)}s`;
-        container.appendChild(div);
-      });
-    }
+         // 2. Creiamo le immagini
+    myImages.forEach((fileName) => {
+      const img = document.createElement('img');
+      img.className = 'bg-image';
+      // QUI HO MESSO LA "I" MAIUSCOLA
+      img.src = '/Images/' + fileName; 
+      container.appendChild(img);
+      imgElements.push(img);
+    });
 
     initSlideshow();
   </script>
