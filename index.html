@@ -104,7 +104,6 @@
         };
       }, [mode]);
 
-      // GESTIONE RISVEGLIO
       useEffect(() => {
         const handleWakeUp = () => {
           loadPrices();
@@ -245,11 +244,11 @@
           mode === 'kiosk'
             ? h('button', {
                 onClick: () => setShowPinModal(true),
-                className: 'text-xs bg-slate-800/50 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg border border-slate-700/50 transition-colors kiosk-btn'
+                className: 'text-sm bg-slate-800/50 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg border border-slate-700/50 transition-colors kiosk-btn'
               }, 'Gestore')
             : h('button', {
                 onClick: () => setMode('kiosk'),
-                className: 'text-xs bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-4 py-2 rounded-lg border border-amber-500/30 font-medium transition-colors kiosk-btn'
+                className: 'text-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-4 py-2 rounded-lg border border-amber-500/30 font-medium transition-colors kiosk-btn'
               }, 'Exit Admin')
         ),
 
@@ -257,24 +256,24 @@
         mode === 'kiosk' && h('main', { className: 'flex-1 flex flex-col py-6 min-h-0' },
 
           paymentStatus === 'idle' && h('div', { className: 'flex-1 flex flex-col justify-center min-h-0' },
-            h('div', { className: 'text-center mb-8 flex-shrink-0' },
-              h('h2', { className: 'text-3xl font-light text-slate-100' }, 'Welcome'),
-              h('p', { className: 'text-base text-slate-400 mt-2' }, 'Select your suite to complete payment')
+            h('div', { className: 'text-center mb-10 flex-shrink-0' },
+              h('h2', { className: 'text-4xl font-light text-slate-100 tracking-wide' }, 'Welcome'),
+              h('p', { className: 'text-lg text-slate-400 mt-2' }, 'Select your suite to complete payment')
             ),
             
-            /* BOTTONI SUITE - ORA PIÙ COMPATTI ED ELEGANTI */
-            h('div', { className: 'flex flex-col gap-4 w-full max-w-lg mx-auto' },
+            /* BOTTONI SUITE - DIMENSIONE INTERMEDIA */
+            h('div', { className: 'flex flex-col gap-5 w-full max-w-xl mx-auto' },
               Object.keys(prices).map(suite =>
                 h('button', {
                   key: suite,
                   onClick: () => { setSelectedSuite(suite); setPaymentStatus('confirm'); },
-                  className: 'kiosk-btn w-full px-8 py-5 rounded-2xl bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 transition-all flex justify-between items-center shadow-lg backdrop-blur-sm'
+                  className: 'kiosk-btn w-full px-8 py-8 rounded-2xl bg-slate-800/70 hover:bg-slate-700/80 border border-slate-700/60 transition-all flex justify-between items-center shadow-lg backdrop-blur-sm'
                 },
                   h('div', { className: 'text-left' },
-                    h('span', { className: 'text-xl sm:text-2xl font-medium text-slate-100 block tracking-wide' }, suite),
-                    prices[suite]?.expiresAt && h('span', { className: 'text-xs text-amber-400/80 block mt-1' }, formatExpiry(prices[suite].expiresAt))
+                    h('span', { className: 'text-2xl sm:text-3xl font-medium text-slate-100 block tracking-wide' }, suite),
+                    prices[suite]?.expiresAt && h('span', { className: 'text-sm text-amber-400/80 block mt-1' }, formatExpiry(prices[suite].expiresAt))
                   ),
-                  h('span', { className: 'text-2xl text-slate-500' }, '→')
+                  h('span', { className: 'text-4xl text-slate-500 font-light' }, '›')
                 )
               )
             )
@@ -282,65 +281,65 @@
 
           /* --- CONFIRM --- */
           paymentStatus === 'confirm' && h('div', { className: 'flex-1 flex items-center justify-center' },
-            h('div', { className: 'w-full max-w-md bg-slate-800/80 backdrop-blur-md border border-slate-700/60 rounded-3xl p-8 text-center space-y-8 shadow-2xl' },
+            h('div', { className: 'w-full max-w-lg bg-slate-800/80 backdrop-blur-md border border-slate-700/60 rounded-3xl p-8 text-center space-y-8 shadow-2xl' },
               h('div', null,
-                h('span', { className: 'text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/20' }, 'Selected Suite'),
-                h('h2', { className: 'text-3xl font-light text-slate-100 mt-5' }, selectedSuite)
+                h('span', { className: 'text-sm font-semibold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/20' }, 'Selected Suite'),
+                h('h2', { className: 'text-4xl font-light text-slate-100 mt-5' }, selectedSuite)
               ),
-              h('div', { className: 'py-6 border-y border-slate-700/60' },
+              h('div', { className: 'py-8 border-y border-slate-700/60' },
                 h('p', { className: 'text-sm text-slate-400 uppercase tracking-widest' }, 'Total Amount'),
-                h('p', { className: 'text-5xl font-bold text-amber-400 mt-2' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
+                h('p', { className: 'text-6xl font-extrabold text-amber-400 mt-2' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
               ),
               getSuitePrice(selectedSuite) > 0
                 ? h('div', { className: 'grid grid-cols-2 gap-4 pt-2' },
                     h('button', {
                       onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
-                      className: 'kiosk-btn w-full py-4 rounded-xl bg-transparent border border-slate-600 hover:bg-slate-700/50 text-slate-300 font-medium text-sm transition-colors'
+                      className: 'kiosk-btn w-full py-5 rounded-2xl bg-transparent border border-slate-600 hover:bg-slate-700/50 text-slate-300 font-medium text-lg transition-colors'
                     }, 'CANCEL'),
                     h('button', {
                       onClick: () => executeStripePayment(selectedSuite, getSuitePrice(selectedSuite)),
-                      className: 'kiosk-btn w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm shadow-lg shadow-amber-500/20 transition-colors'
+                      className: 'kiosk-btn w-full py-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-lg shadow-lg shadow-amber-500/20 transition-colors'
                     }, 'PAY NOW')
                   )
-                : h('div', { className: 'space-y-4' },
-                    h('p', { className: 'text-sm text-slate-400' }, 'No balance pending for this suite.'),
+                : h('div', { className: 'space-y-5' },
+                    h('p', { className: 'text-lg text-slate-400' }, 'No balance pending for this suite.'),
                     h('button', {
                       onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
-                      className: 'kiosk-btn w-full py-4 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 font-medium text-sm transition-colors'
+                      className: 'kiosk-btn w-full py-5 rounded-2xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 font-medium text-lg transition-colors'
                     }, 'BACK TO SUITES')
                   )
             )
           ),
 
           /* --- PROCESSING --- */
-          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-10 space-y-8 max-w-md mx-auto w-full shadow-2xl' },
-            h('div', { className: 'inline-block animate-spin rounded-full h-16 w-16 border-4 border-amber-400 border-t-transparent' }),
+          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-10 space-y-8 max-w-lg mx-auto w-full shadow-2xl' },
+            h('div', { className: 'inline-block animate-spin rounded-full h-24 w-24 border-4 border-amber-400 border-t-transparent' }),
             h('div', null,
-              h('h3', { className: 'text-2xl font-light text-slate-100' }, 'Ready on Reader'),
-              h('p', { className: 'text-sm text-slate-400 mt-3 px-4 leading-relaxed' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal.')
+              h('h3', { className: 'text-3xl font-light text-slate-100' }, 'Ready on Reader'),
+              h('p', { className: 'text-lg text-slate-400 mt-4 px-4 leading-relaxed' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal.')
             ),
             h('button', {
               onClick: cancelReaderAction,
-              className: 'text-sm text-slate-500 hover:text-rose-400 underline transition-colors pt-4'
+              className: 'text-base text-slate-500 hover:text-rose-400 underline transition-colors pt-4'
             }, 'Cancel Transaction')
           ),
 
           /* --- SUCCESS --- */
-          paymentStatus === 'success' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-emerald-900/20 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-10 space-y-6 max-w-md mx-auto w-full shadow-2xl' },
-            h('div', { className: 'text-6xl text-emerald-400' }, '✓'),
-            h('h3', { className: 'text-3xl font-medium text-emerald-400' }, 'Payment Successful'),
-            h('p', { className: 'text-base text-slate-300' }, 'Thank you for your stay!')
+          paymentStatus === 'success' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-emerald-900/20 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-10 space-y-6 max-w-lg mx-auto w-full shadow-2xl' },
+            h('div', { className: 'text-8xl text-emerald-400' }, '✓'),
+            h('h3', { className: 'text-4xl font-medium text-emerald-400' }, 'Payment Successful'),
+            h('p', { className: 'text-xl text-slate-300' }, 'Thank you for your stay!')
           ),
 
           /* --- ERROR --- */
-          paymentStatus === 'error' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-rose-900/20 backdrop-blur-sm border border-rose-500/20 rounded-3xl p-10 space-y-8 max-w-md mx-auto w-full shadow-2xl' },
+          paymentStatus === 'error' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-rose-900/20 backdrop-blur-sm border border-rose-500/20 rounded-3xl p-10 space-y-8 max-w-lg mx-auto w-full shadow-2xl' },
             h('div', null,
-              h('h3', { className: 'text-2xl font-medium text-rose-400' }, 'Transaction Error'),
-              h('p', { className: 'text-sm text-slate-300 mt-3 px-4 leading-relaxed' }, errorMessage)
+              h('h3', { className: 'text-3xl font-medium text-rose-400' }, 'Transaction Error'),
+              h('p', { className: 'text-lg text-slate-300 mt-4 px-4 leading-relaxed' }, errorMessage)
             ),
             h('button', {
               onClick: cancelReaderAction,
-              className: 'kiosk-btn py-3 px-8 bg-slate-800/80 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium border border-slate-700 transition-colors'
+              className: 'kiosk-btn py-4 px-10 bg-slate-800/80 hover:bg-slate-700 text-slate-200 rounded-2xl text-lg font-medium border border-slate-700 transition-colors'
             }, 'Back to Home')
           )
         ),
@@ -358,9 +357,9 @@
 
               return h('div', { key: suite, className: 'bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 space-y-3' },
                 h('div', { className: 'flex items-center justify-between gap-2' },
-                  h('span', { className: 'font-semibold text-slate-100 text-lg' }, suite),
+                  h('span', { className: 'font-semibold text-slate-100 text-xl' }, suite),
                   h('div', { className: 'flex items-center gap-2' },
-                    h('span', { className: 'text-slate-400 text-base font-bold' }, '€'),
+                    h('span', { className: 'text-slate-400 text-lg font-bold' }, '€'),
                     h('input', {
                       type: 'number',
                       inputMode: 'decimal',
@@ -371,13 +370,13 @@
                     }),
                     h('button', {
                       onClick: () => updateSuite(suite, ''),
-                      className: 'kiosk-btn text-xs bg-slate-700/50 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 px-3 py-2.5 rounded-xl transition-colors font-medium'
+                      className: 'kiosk-btn text-sm bg-slate-700/50 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 px-3 py-2.5 rounded-xl transition-colors font-medium'
                     }, 'Clear')
                   )
                 ),
 
                 hasPrice && h('div', { className: 'space-y-2 border-t border-slate-700/40 pt-3' },
-                  h('div', { className: 'flex justify-between items-center text-xs' },
+                  h('div', { className: 'flex justify-between items-center text-sm' },
                     h('span', { className: 'text-slate-400' }, 'Validità prezzo:'),
                     h('span', { className: 'text-amber-400 font-medium' }, formatExpiry(prices[suite].expiresAt))
                   ),
@@ -386,7 +385,7 @@
                       h('button', {
                         key: d,
                         onClick: () => updateSuite(suite, prices[suite].price, d),
-                        className: `kiosk-btn py-2 rounded-lg text-sm font-bold transition-all border ${
+                        className: `kiosk-btn py-2.5 rounded-lg text-sm font-bold transition-all border ${
                           currentDays === d
                             ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md'
                             : 'bg-slate-900/50 text-slate-400 border-slate-700 hover:bg-slate-700'
@@ -406,7 +405,7 @@
             onClick: () => pinInputRef.current?.focus(),
             className: 'bg-slate-800 border border-slate-700 p-6 rounded-3xl w-full max-w-sm text-center space-y-6 shadow-2xl'
           },
-            h('h3', { className: 'font-medium text-slate-200 text-lg' }, 'PIN Gestore'),
+            h('h3', { className: 'font-medium text-slate-200 text-xl' }, 'PIN Gestore'),
             h('input', {
               ref: pinInputRef,
               type: 'password',
@@ -415,7 +414,7 @@
               maxLength: '4',
               value: pinInput,
               onChange: (e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)),
-              className: 'w-full text-center text-3xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-3 text-amber-400 focus:outline-none focus:border-amber-400 transition-colors',
+              className: 'w-full text-center text-4xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-4 text-amber-400 focus:outline-none focus:border-amber-400 transition-colors',
               placeholder: '••••',
               autoFocus: true,
               autoComplete: 'off',
@@ -423,36 +422,36 @@
               autoCapitalize: 'off',
               spellCheck: false
             }),
-            h('div', { className: 'grid grid-cols-3 gap-2' },
+            h('div', { className: 'grid grid-cols-3 gap-3' },
               [1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => 
                 h('button', {
                   key: num,
                   onClick: () => setPinInput(prev => prev.length < 4 ? prev + num : prev),
-                  className: 'kiosk-btn py-3 bg-slate-700/50 text-slate-200 rounded-xl text-xl font-medium hover:bg-slate-700 transition-colors'
+                  className: 'kiosk-btn py-4 bg-slate-700/50 text-slate-200 rounded-xl text-2xl font-medium hover:bg-slate-700 transition-colors'
                 }, num)
               ),
               h('button', {
                 onClick: () => setPinInput(prev => prev.slice(0, -1)),
-                className: 'kiosk-btn py-3 bg-slate-700/50 text-rose-400 rounded-xl text-xl font-medium hover:bg-slate-700 transition-colors'
+                className: 'kiosk-btn py-4 bg-slate-700/50 text-rose-400 rounded-xl text-2xl font-medium hover:bg-slate-700 transition-colors'
               }, '⌫'),
               h('button', {
                 onClick: () => setPinInput('0'),
-                className: 'kiosk-btn py-3 bg-slate-700/50 text-slate-200 rounded-xl text-xl font-medium hover:bg-slate-700 transition-colors'
+                className: 'kiosk-btn py-4 bg-slate-700/50 text-slate-200 rounded-xl text-2xl font-medium hover:bg-slate-700 transition-colors'
               }, '0'),
               h('button', {
                 onClick: () => { setShowPinModal(false); setPinInput(''); },
-                className: 'kiosk-btn py-3 bg-transparent text-slate-500 rounded-xl text-sm font-medium hover:text-slate-300 transition-colors'
+                className: 'kiosk-btn py-4 bg-transparent text-slate-500 rounded-xl text-sm font-medium hover:text-slate-300 transition-colors'
               }, 'X')
             ),
             h('button', {
               onClick: handleAdminAccess,
-              className: 'kiosk-btn w-full py-4 bg-amber-500 text-slate-900 font-bold rounded-xl text-lg mt-2 shadow-lg shadow-amber-500/20 transition-colors'
+              className: 'kiosk-btn w-full py-5 bg-amber-500 text-slate-900 font-bold rounded-xl text-xl mt-2 shadow-lg shadow-amber-500/20 transition-colors'
             }, 'Entra')
           )
         ),
 
         /* ---------- FOOTER ---------- */
-        h('footer', { className: 'text-center text-[10px] text-slate-600/80 border-t border-slate-800/60 pt-4 flex-shrink-0 tracking-wider' },
+        h('footer', { className: 'text-center text-xs text-slate-600/80 border-t border-slate-800/60 pt-4 flex-shrink-0 tracking-wider' },
           'MARINALI ROOMS • SECURE PAYMENT SYSTEM'
         )
       );
