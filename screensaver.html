@@ -21,6 +21,15 @@
       z-index: 1;
     }
 
+    /* Stile per le immagini */
+    .bg-image {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 2s ease-in-out; /* Dissolvenza morbida */
+    }
+
     .overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -105,67 +114,43 @@
   </div>
 
   <script>
-    // QUI INSERISCI I NOMI DELLE TUE FOTO
-    // Basta mettere i nomi esatti dei file che hai caricato nella cartella images su GitHub
+    // I nomi delle tue foto
     const myImages = [
-      "foto1.jpg",
-      "foto2.jpg",
-      "foto3.jpg",
-      "foto4.jpg",
-      "foto5.jpg",
-      "foto6.jpg",
-      "foto7.jpg",
-      "foto8.jpg",
-      "foto9.jpg",
-      "foto10.jpg",
-      "foto11.jpg",
-      "foto12.jpg",
-      "foto13.jpg",
-      "foto14.jpg",
-      "foto15.jpg"
+      "foto1.jpg", "foto2.jpg", "foto3.jpg", "foto4.jpg", "foto5.jpg",
+      "foto6.jpg", "foto7.jpg", "foto8.jpg", "foto9.jpg", "foto10.jpg",
+      "foto11.jpg", "foto12.jpg", "foto13.jpg", "foto14.jpg", "foto15.jpg"
     ];
 
-    function initSlideshow() {
-      const container = document.getElementById('bg-container');
-      
-      if (myImages.length === 0) return;
+    const container = document.getElementById('bg-container');
+    const imgElements = [];
 
-      const totalDuration = 24; // Durata del ciclo in secondi
-      const step = 100 / myImages.length; 
-      const fadeTime = Math.min(step * 0.2, 10);
-
-      // Genera l'animazione CSS in base a quante foto ci sono
-      const style = document.createElement('style');
-      style.innerHTML = `
-        @keyframes crossfade {
-          0% { opacity: 0; }
-          ${fadeTime}% { opacity: 1; }
-          ${step - fadeTime}% { opacity: 1; }
-          ${step}% { opacity: 0; }
-          100% { opacity: 0; }
-        }
-        .bg-image {
-          position: absolute;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background-size: cover;
-          background-position: center;
-          opacity: 0;
-          animation: crossfade ${totalDuration}s infinite;
-        }
-      `;
-      document.head.appendChild(style);
-
-         // 2. Creiamo le immagini
+    // Creiamo gli elementi immagine in base alla lista
     myImages.forEach((fileName) => {
       const img = document.createElement('img');
       img.className = 'bg-image';
-      // QUI HO MESSO LA "I" MAIUSCOLA
+      
+      // ⚠️ ATTENZIONE: Qui c'è "Images" con la I maiuscola come nel tuo codice.
+      // Se hai rinominato la cartella in minuscolo su GitHub, cambia in '/images/'
       img.src = '/Images/' + fileName; 
+      
       container.appendChild(img);
       imgElements.push(img);
     });
 
-    initSlideshow();
+    // Facciamo partire lo slideshow
+    if (imgElements.length > 0) {
+      let currentIndex = 0;
+      
+      // Mostra la prima foto
+      imgElements[0].style.opacity = '1';
+
+      // Cambia foto ogni 6 secondi (6000 millisecondi)
+      setInterval(() => {
+        imgElements[currentIndex].style.opacity = '0'; // Nascondi quella attuale
+        currentIndex = (currentIndex + 1) % imgElements.length; // Passa alla successiva
+        imgElements[currentIndex].style.opacity = '1'; // Mostra la nuova
+      }, 6000);
+    }
   </script>
 </body>
 </html>
