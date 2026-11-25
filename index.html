@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -51,7 +51,7 @@
       'Suite 4': { price: '', expiresAt: null, days: 1 }
     };
 
-    function App() {
+       function App() {
       const [mode, setMode] = useState('kiosk');
       const [prices, setPrices] = useState(INITIAL_PRICES);
       const [selectedSuite, setSelectedSuite] = useState(null);
@@ -60,10 +60,8 @@
       const [pinInput, setPinInput] = useState('');
       const [showPinModal, setShowPinModal] = useState(false);
 
-      // FIX: ref per forzare il focus sull'input PIN
       const pinInputRef = useRef(null);
 
-      // FIX: quando il modal PIN si apre, forza il focus (fallback ad autoFocus)
       useEffect(() => {
         if (showPinModal) {
           const t = setTimeout(() => {
@@ -73,51 +71,48 @@
         }
       }, [showPinModal]);
 
-      const loadAndFilterPrices = () => {
-        const saved = localStorage.getItem('marinali_prices_v3');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            const now = Date.now();
-            let hasChanges = false;
-
-            Object.keys(parsed).forEach(suite => {
-              if (parsed[suite].expiresAt && now > parsed[suite].expiresAt) {
-                parsed[suite] = { price: '', expiresAt: null, days: 1 };
-                hasChanges = true;
-              }
-            });
-
-            if (hasChanges) {
-              localStorage.setItem('marinali_prices_v3', JSON.stringify(parsed));
-            }
-            setPrices(parsed);
-          } catch (e) {
-            setPrices(INITIAL_PRICES);
+      /* MODIFICATO: Nuova funzione che legge dal server */
+      const loadPrices = async () => {
+        try {
+          const r = await fetch('/api/prices', { cache: 'no-store' });
+          if (r.ok) {
+            const fresh = await r.json();
+            setPrices(fresh);
+            // Salviamo una copia locale solo per mostrarla istantaneamente al prossimo avvio
+            localStorage.setItem('marinali_prices_cache', JSON.stringify(fresh));
           }
+        } catch (e) {
+          console.warn('Fetch prezzi fallita:', e);
         }
       };
 
+      /* MODIFICATO: useEffect iniziale per polling e niente più BroadcastChannel */
       useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'admin') setMode('admin');
 
-        loadAndFilterPrices();
-        const interval = setInterval(loadAndFilterPrices, 30000);
+        // 1. Mostra subito la cache se esiste (evita schermata vuota all'avvio)
+        const cached = localStorage.getItem('marinali_prices_cache');
+        if (cached) {
+          try { setPrices(JSON.parse(cached)); } catch (e) {}
+        }
 
-        const channel = new BroadcastChannel('marinali_pos_channel');
-        channel.onmessage = (event) => {
-          if (event.data.type === 'PRICES_UPDATED') {
-            setPrices(event.data.prices);
-          }
-        };
+        // 2. Chiedi subito i dati freschi al server
+        loadPrices();
+
+        // 3. Polling ogni 10 secondi (solo se in modalità kiosk)
+        let interval;
+        if (mode === 'kiosk') {
+          interval = setInterval(loadPrices, 10000);
+        }
+
         return () => {
-          clearInterval(interval);
-          channel.close();
+          if (interval) clearInterval(interval);
         };
-      }, []);
+      }, [mode]);
 
-      const updateSuite = (suite, priceVal, daysVal = null) => {
+      /* MODIFICATO: updateSuite salva sul server invece che solo in locale */
+      const updateSuite = async (suite, priceVal, daysVal = null) => {
         const now = Date.now();
         const selectedDays = daysVal !== null ? daysVal : (prices[suite]?.days || 1);
 
@@ -135,12 +130,20 @@
           }
         };
 
+        // Aggiorna l'interfaccia del gestore all'istante
         setPrices(updated);
-        localStorage.setItem('marinali_prices_v3', JSON.stringify(updated));
+        localStorage.setItem('marinali_prices_cache', JSON.stringify(updated));
 
-        const channel = new BroadcastChannel('marinali_pos_channel');
-        channel.postMessage({ type: 'PRICES_UPDATED', prices: updated });
-        channel.close();
+        // Invia i nuovi dati al server (Upstash Redis)
+        try {
+          await fetch('/api/prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prices: updated })
+          });
+        } catch (e) {
+          console.warn('Errore di rete durante il salvataggio:', e);
+        }
       };
 
       const handleAdminAccess = () => {
@@ -151,7 +154,6 @@
         } else {
           alert('Incorrect PIN');
           setPinInput('');
-          // Riapri il focus per nuovo tentativo
           setTimeout(() => pinInputRef.current?.focus(), 50);
         }
       };
@@ -379,13 +381,11 @@
         /* ---------- PIN MODAL ---------- */
         showPinModal && h('div', { className: 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50' },
           h('div', {
-            // FIX: click ovunque nel riquadro riporta il focus all'input
             onClick: () => pinInputRef.current?.focus(),
             className: 'bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-center space-y-5'
           },
             h('h3', { className: 'font-semibold text-slate-200 text-lg' }, 'Inserisci PIN Gestore'),
             h('input', {
-              // FIX: ref + focus programmatico
               ref: pinInputRef,
               type: 'password',
               inputMode: 'numeric',
@@ -401,16 +401,31 @@
               autoCapitalize: 'off',
               spellCheck: false
             }),
-            h('div', { className: 'grid grid-cols-2 gap-3' },
+            h('div', { className: 'grid grid-cols-3 gap-2' },
+              [1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => 
+                h('button', {
+                  key: num,
+                  onClick: () => setPinInput(prev => prev.length < 4 ? prev + num : prev),
+                  className: 'kiosk-btn py-3 bg-slate-700 text-slate-200 rounded-xl text-xl font-bold hover:bg-slate-600'
+                }, num)
+              ),
+              h('button', {
+                onClick: () => setPinInput(prev => prev.slice(0, -1)),
+                className: 'kiosk-btn py-3 bg-slate-700 text-rose-400 rounded-xl text-xl font-bold hover:bg-slate-600'
+              }, '⌫'),
+              h('button', {
+                onClick: () => setPinInput('0'),
+                className: 'kiosk-btn py-3 bg-slate-700 text-slate-200 rounded-xl text-xl font-bold hover:bg-slate-600'
+              }, '0'),
               h('button', {
                 onClick: () => { setShowPinModal(false); setPinInput(''); },
-                className: 'kiosk-btn py-3 bg-slate-700 text-slate-300 rounded-xl text-base font-medium'
-              }, 'Annulla'),
-              h('button', {
-                onClick: handleAdminAccess,
-                className: 'kiosk-btn py-3 bg-amber-500 text-slate-950 font-bold rounded-xl text-base'
-              }, 'Entra')
-            )
+                className: 'kiosk-btn py-3 bg-slate-800 text-slate-400 rounded-xl text-sm font-medium hover:bg-slate-600'
+              }, 'X')
+            ),
+            h('button', {
+              onClick: handleAdminAccess,
+              className: 'kiosk-btn w-full py-4 bg-amber-500 text-slate-950 font-bold rounded-xl text-lg mt-2'
+            }, 'Entra')
           )
         ),
 
