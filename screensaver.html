@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Screensaver - Marinali Rooms</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0f172a;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    /* Sfondo con effetto slideshow (Crossfade) */
+    .bg-container {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1;
+    }
+    
+    .bg-image {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-size: cover;
+      background-position: center;
+      opacity: 0;
+      animation: crossfade 24s infinite;
+    }
+
+    /* Sostituisci gli URL qui sotto con le tue foto */
+    .bg-image:nth-child(1) { background-image: url('https://images.unsplash.com/photo-1543429257-3eb0b65d9c58?q=80&w=1080&auto=format&fit=crop'); animation-delay: 0s; }
+    .bg-image:nth-child(2) { background-image: url('https://images.unsplash.com/photo-1516483638261-f4085ee6b6f4?q=80&w=1080&auto=format&fit=crop'); animation-delay: 8s; }
+    .bg-image:nth-child(3) { background-image: url('https://images.unsplash.com/photo-1498307833015-e7b400441eb8?q=80&w=1080&auto=format&fit=crop'); animation-delay: 16s; }
+
+    @keyframes crossfade {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      33% { opacity: 1; }
+      43% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    /* Overlay scuro per contrasto */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.65);
+      z-index: 2;
+    }
+
+    /* Contenitore del testo con animazione anti burn-in (fluttuazione lentissima) */
+    .content {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+      padding: 20px;
+      box-sizing: border-box;
+      /* Animazione che sposta il blocco di testo in un'orbita dolce */
+      animation: drift 30s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(-15px, -15px); }
+      25% { transform: translate(15px, -10px); }
+      50% { transform: translate(10px, 15px); }
+      75% { transform: translate(-10px, 10px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    /* Icona mano che pulsa */
+    .tap-icon {
+      font-size: 4rem;
+      margin-bottom: 10px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+
+    /* Titolo principale */
+    .title {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: #fbbf24; /* Ambra */
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+    }
+
+    /* Contenitore delle traduzioni */
+    .languages {
+      margin-top: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Stile unificato per TUTTE le lingue (stessa grandezza e colore) */
+    .lang-text {
+      font-size: 1.5rem; /* Più piccolo del titolo */
+      font-weight: 500;
+      margin: 0;
+      color: #cbd5e1;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sfondo animato -->
+  <div class="bg-container">
+    <div class="bg-image"></div>
+    <div class="bg-image"></div>
+    <div class="bg-image"></div>
+  </div>
+
+  <!-- Sfumatura scura -->
+  <div class="overlay"></div>
+
+  <!-- Testi con animazione anti burn-in -->
+  <div class="content">
+    <div class="tap-icon">👆</div>
+    <h1 class="title">Tap to start</h1>
+    
+    <div class="languages">
+      <!-- Tutte le lingue hanno la stessa identica classe CSS -->
+      <p class="lang-text">Tocca per iniziare</p>
+      <p class="lang-text">Tap to start</p>
+      <p class="lang-text">Tippen Sie zum Starten</p>
+    </div>
+  </div>
+
+</body>
+</html>
