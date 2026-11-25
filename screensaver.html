@@ -15,14 +15,12 @@
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    /* Sfondo */
     .bg-container {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
       z-index: 1;
     }
 
-    /* Overlay scuro per contrasto */
     .overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -30,7 +28,6 @@
       z-index: 2;
     }
 
-    /* Contenitore del testo con animazione anti burn-in */
     .content {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -94,9 +91,7 @@
 </head>
 <body>
 
-  <!-- Qui lo script inserirà le immagini in automatico -->
   <div class="bg-container" id="bg-container"></div>
-
   <div class="overlay"></div>
 
   <div class="content">
@@ -110,58 +105,65 @@
   </div>
 
   <script>
-    async function initSlideshow() {
+    // QUI INSERISCI I NOMI DELLE TUE FOTO
+    // Basta mettere i nomi esatti dei file che hai caricato nella cartella images su GitHub
+    const myImages = [
+      "foto1.jpg",
+      "foto2.jpg",
+      "foto3.jpg",
+      "foto4.jpg",
+      "foto5.jpg",
+      "foto6.jpg",
+      "foto7.jpg",
+      "foto8.jpg",
+      "foto9.jpg",
+      "foto10.jpg",
+      "foto11.jpg",
+      "foto12.jpg",
+      "foto13.jpg",
+      "foto14.jpg",
+      "foto15.jpg"
+    ];
+
+    function initSlideshow() {
       const container = document.getElementById('bg-container');
       
-      try {
-        // Chiede la lista delle foto alla nostra API
-        const res = await fetch('/api/images');
-        const images = await res.json();
+      if (myImages.length === 0) return;
 
-        if (!images || images.length === 0) {
-          console.log("Nessuna immagine trovata, uso sfondo scuro.");
-          return; // Se la cartella è vuota, resta lo sfondo scuro
+      const totalDuration = 24; // Durata del ciclo in secondi
+      const step = 100 / myImages.length; 
+      const fadeTime = Math.min(step * 0.2, 10);
+
+      // Genera l'animazione CSS in base a quante foto ci sono
+      const style = document.createElement('style');
+      style.innerHTML = `
+        @keyframes crossfade {
+          0% { opacity: 0; }
+          ${fadeTime}% { opacity: 1; }
+          ${step - fadeTime}% { opacity: 1; }
+          ${step}% { opacity: 0; }
+          100% { opacity: 0; }
         }
+        .bg-image {
+          position: absolute;
+          top: 0; left: 0; width: 100%; height: 100%;
+          background-size: cover;
+          background-position: center;
+          opacity: 0;
+          animation: crossfade ${totalDuration}s infinite;
+        }
+      `;
+      document.head.appendChild(style);
 
-        const totalDuration = 24; // Durata totale del ciclo in secondi (es. 24s)
-        // Calcola la percentuale di tempo per ogni immagine (es. se ci sono 4 foto, ognuna sta 25%)
-        const step = 100 / images.length; 
-        const fadeTime = Math.min(step * 0.2, 10); // Calcola una dissolvenza morbida
-
-        // Genera l'animazione CSS dinamicamente in base a quante foto ci sono
-        const style = document.createElement('style');
-        style.innerHTML = `
-          @keyframes crossfade {
-            0% { opacity: 0; }
-            ${fadeTime}% { opacity: 1; }
-            ${step - fadeTime}% { opacity: 1; }
-            ${step}% { opacity: 0; }
-            100% { opacity: 0; }
-          }
-          .bg-image {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover;
-            background-position: center;
-            opacity: 0;
-            animation: crossfade ${totalDuration}s infinite;
-          }
-        `;
-        document.head.appendChild(style);
-
-        // Crea un div per ogni foto trovata nella cartella
-        images.forEach((img, index) => {
-          const div = document.createElement('div');
-          div.className = 'bg-image';
-          div.style.backgroundImage = `url('/images/${img}')`;
-          // Sfalsa la partenza dell'animazione per ogni immagine
-          div.style.animationDelay = `${index * (totalDuration / images.length)}s`;
-          container.appendChild(div);
-        });
-
-      } catch (e) {
-        console.error("Errore nel caricamento dello slideshow:", e);
-      }
+      // Crea un livello per ogni immagine
+      myImages.forEach((img, index) => {
+        const div = document.createElement('div');
+        div.className = 'bg-image';
+        // Cerca la foto nella cartella /images/
+        div.style.backgroundImage = `url('/images/${img}')`;
+        div.style.animationDelay = `${index * (totalDuration / myImages.length)}s`;
+        container.appendChild(div);
+      });
     }
 
     initSlideshow();
