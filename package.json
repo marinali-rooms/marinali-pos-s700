@@ -1,6 +1,9 @@
 {
   "dependencies": {
-    "@upstash/redis": "^1.34.3"
+    "@upstash/redis": "^1.34.3",
     "stripe": "^14.25.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
