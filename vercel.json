@@ -1,1 +1,7 @@
-
+{
+  "functions": {
+    "api/stripe-terminal.js": {
+      "maxDuration": 60
+    }
+  }
+}
