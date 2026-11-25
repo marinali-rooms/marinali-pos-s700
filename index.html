@@ -11,30 +11,30 @@
     html, body, #root { height: 100%; margin: 0; }
     body { overflow: hidden; background-color: #0f172a; }
 
-    /* Fix per tastiera su Android */
     input, textarea {
       -webkit-user-select: text !important;
       user-select: text !important;
     }
-
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button {
       -webkit-appearance: none;
       margin: 0;
     }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
+    input[type=number] { -moz-appearance: textfield; }
 
-    .app-screen {
-      height: 100vh;
-      height: 100dvh;
-    }
-
+    .app-screen { height: 100vh; height: 100dvh; }
     .kiosk-btn:active { transform: scale(0.98); }
     .kiosk-btn { -webkit-tap-highlight-color: transparent; }
-
     .admin-scroll { overflow-y: auto; }
+
+    /* Animazione per la freccia che indica il POS */
+    @keyframes slide-right {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(30px); }
+    }
+    .animate-arrow {
+      animation: slide-right 1s ease-in-out infinite;
+    }
   </style>
 </head>
 <body class="text-slate-100 font-sans antialiased select-none">
@@ -261,7 +261,6 @@
               h('p', { className: 'text-lg text-slate-400 mt-2' }, 'Select your suite to complete payment')
             ),
             
-            /* BOTTONI SUITE - DIMENSIONE INTERMEDIA */
             h('div', { className: 'flex flex-col gap-5 w-full max-w-xl mx-auto' },
               Object.keys(prices).map(suite =>
                 h('button', {
@@ -291,15 +290,21 @@
                 h('p', { className: 'text-6xl font-extrabold text-amber-400 mt-2' }, `€ ${getSuitePrice(selectedSuite).toFixed(2)}`)
               ),
               getSuitePrice(selectedSuite) > 0
-                ? h('div', { className: 'grid grid-cols-2 gap-4 pt-2' },
-                    h('button', {
-                      onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
-                      className: 'kiosk-btn w-full py-5 rounded-2xl bg-transparent border border-slate-600 hover:bg-slate-700/50 text-slate-300 font-medium text-lg transition-colors'
-                    }, 'CANCEL'),
-                    h('button', {
-                      onClick: () => executeStripePayment(selectedSuite, getSuitePrice(selectedSuite)),
-                      className: 'kiosk-btn w-full py-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-lg shadow-lg shadow-amber-500/20 transition-colors'
-                    }, 'PAY NOW')
+                ? h('div', { className: 'space-y-5' },
+                    h('div', { className: 'grid grid-cols-2 gap-4' },
+                      h('button', {
+                        onClick: () => { setPaymentStatus('idle'); setSelectedSuite(null); },
+                        className: 'kiosk-btn w-full py-5 rounded-2xl bg-transparent border border-slate-600 hover:bg-slate-700/50 text-slate-300 font-medium text-lg transition-colors'
+                      }, 'CANCEL'),
+                      h('button', {
+                        onClick: () => executeStripePayment(selectedSuite, getSuitePrice(selectedSuite)),
+                        className: 'kiosk-btn w-full py-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-lg shadow-lg shadow-amber-500/20 transition-colors'
+                      }, 'PAY NOW')
+                    ),
+                    // Suggerimento per il POS
+                    h('p', { className: 'text-sm text-slate-400 font-medium tracking-wide pt-2 animate-pulse' }, 
+                      '👇 Il lettore carte si trova sulla tua destra 👉'
+                    )
                   )
                 : h('div', { className: 'space-y-5' },
                     h('p', { className: 'text-lg text-slate-400' }, 'No balance pending for this suite.'),
@@ -312,16 +317,26 @@
           ),
 
           /* --- PROCESSING --- */
-          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-10 space-y-8 max-w-lg mx-auto w-full shadow-2xl' },
-            h('div', { className: 'inline-block animate-spin rounded-full h-24 w-24 border-4 border-amber-400 border-t-transparent' }),
-            h('div', null,
-              h('h3', { className: 'text-3xl font-light text-slate-100' }, 'Ready on Reader'),
-              h('p', { className: 'text-lg text-slate-400 mt-4 px-4 leading-relaxed' }, 'Please tap, insert, or swipe your card on the Stripe S700 terminal.')
+          paymentStatus === 'processing' && h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-10 space-y-6 max-w-lg mx-auto w-full shadow-2xl' },
+            
+            // Animazione della freccia verso il POS
+            h('div', { className: 'flex items-center justify-center space-x-4 text-amber-400 mb-2' },
+              h('span', { className: 'text-6xl' }, '💳'),
+              h('span', { className: 'text-7xl font-light animate-arrow' }, '→')
             ),
+
+            h('div', null,
+              h('h3', { className: 'text-4xl font-bold text-slate-100 mb-4' }, 'Usa il POS'),
+              h('p', { className: 'text-2xl text-amber-400 font-medium mb-2' }, 'alla tua destra'),
+              h('p', { className: 'text-lg text-slate-400 mt-4 px-4 leading-relaxed' }, 'Appoggia o inserisci la carta sul lettore S700.')
+            ),
+            
+            h('div', { className: 'inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-600 border-t-amber-400 mt-4' }),
+            
             h('button', {
               onClick: cancelReaderAction,
-              className: 'text-base text-slate-500 hover:text-rose-400 underline transition-colors pt-4'
-            }, 'Cancel Transaction')
+              className: 'text-sm text-slate-500 hover:text-rose-400 underline transition-colors pt-6'
+            }, 'Annulla transazione')
           ),
 
           /* --- SUCCESS --- */
